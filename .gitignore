@@ -1,0 +1,21 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+*.sqlite3
+*.sqlite3-journal
+data/
+.pytest_cache/
+
+# Personal / sensitive data
+Instagram_data/
+saved_posts.json
+
+# Packaging / build artifacts
+*.egg-info/
+dist/
+build/
+
+# System files
+.DS_Store
+Thumbs.db

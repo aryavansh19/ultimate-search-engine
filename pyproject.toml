@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "link-memory-extractor"
+version = "0.1.0"
+description = "Extraction layer for a personal link-memory search engine"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic==2.9.2",
+    "httpx==0.27.2",
+    "beautifulsoup4==4.12.3",
+    "python-dotenv==1.0.1",
+    "numpy==2.2.1",
+    "fastapi==0.115.6",
+    "uvicorn==0.34.0",
+    "yt-dlp>=2024.12.13",
+]
+
+[project.scripts]
+extractor = "extractor.__main__:main"
+enrichment = "enrichment.__main__:main"
+search = "search.__main__:main"
+linkmemory-api = "api.__main__:main"
+linkmemory-share = "api.share:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

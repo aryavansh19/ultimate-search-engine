@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seven Years Inside Instagram — A Data Study</title>
+<meta name="description" content="I exported seven years of my own Instagram data and counted all of it. 203 reels a day. 1,953 posts scrolled for every one saved. 98% of stories from accounts I never followed.">
+<meta name="author" content="Aryav">
+<meta name="color-scheme" content="light">
+<meta property="og:title" content="Seven Years Inside Instagram — A Data Study">
+<meta property="og:description" content="209 MB, 1,057 files, no AI. What my own Instagram export revealed about me.">
+<meta property="og:type" content="article">
+
+<!--
+  A single static page. No build step, no framework, no tracking.
+  Every number came from a local Instagram data export, computed with plain counting.
+  Charts are hand-written inline SVG so the file stays self-contained.
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Instrument+Sans:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ══════════════════════════════════════ tokens — "data desk"
+   paper ground · ink rules · Klein blue + signal red · hard offset shadows */
+:root{
+  --paper:#F6F6F2;
+  --card:#FFFFFF;
+  --ink:#111318;
+  --ink-soft:#3C3F47;
+  --muted:#6B6E78;
+  --faint:#A2A5AF;
+  --line:#D9DAD2;
+  --line-soft:#EAEAE3;
+  --off:#E4E4DC;
+
+  --blue:#002FA7;        /* International Klein Blue — the voice of the page */
+  --signal:#FF4D2E;      /* signal red — peaks and highlights only */
+  --teal:#0E9488;
+  --amber:#E8890C;
+
+  --disp:"Archivo",system-ui,sans-serif;
+  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+
+  --ease:cubic-bezier(.22,.68,0,1);
+  --spring:cubic-bezier(.34,1.46,.64,1);
+  --pad:clamp(20px,5vw,48px);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--body);font-size:17px;line-height:1.62;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+}
+::selection{background:var(--blue);color:#fff}
+
+/* ── chrome ── */
+.progress{position:fixed;inset:0 0 auto 0;height:3px;z-index:60}
+.progress i{display:block;height:100%;width:0;background:var(--signal);transition:width .1s linear}
+
+.rail-nav{position:fixed;z-index:50;left:18px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:3px}
+.rail-nav a{display:flex;align-items:center;gap:10px;text-decoration:none;padding:4px 5px;color:var(--faint)}
+.rail-nav a .dot{width:7px;height:7px;flex:none;background:var(--line);border:1px solid var(--faint);transition:all .3s var(--ease)}
+.rail-nav a .nm{
+  max-width:0;overflow:hidden;white-space:nowrap;opacity:0;
+  font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  transition:max-width .35s var(--ease),opacity .25s;
+}
+.rail-nav:hover a .nm{max-width:150px;opacity:1}
+.rail-nav a:hover{color:var(--ink)}
+.rail-nav a[aria-current="true"] .dot{background:var(--signal);border-color:var(--ink);transform:scale(1.45)}
+.rail-nav a[aria-current="true"]{color:var(--ink)}
+@media(max-width:1260px){.rail-nav{display:none}}
+
+/* ── layout: one container width for every section ── */
+main{position:relative;z-index:2}
+.wrap{width:min(1120px,100%);margin-inline:auto;padding-inline:var(--pad)}
+.mid{max-width:60ch}
+.mid.center{margin-inline:auto}
+section{padding-block:clamp(62px,9.5vh,112px)}
+
+/* ── type ── */
+h1,h2,h3{margin:0;line-height:1.02;letter-spacing:-.025em;color:var(--ink)}
+h1{
+  font-family:var(--disp);font-weight:800;
+  font-size:clamp(40px,7.6vw,96px);
+  text-transform:uppercase;line-height:.95;letter-spacing:-.032em;
+  max-width:16ch;
+}
+h2{font-family:var(--disp);font-weight:750;font-size:clamp(28px,4.4vw,46px);letter-spacing:-.022em;text-wrap:balance}
+h3{font-size:15.5px;font-weight:700;letter-spacing:-.005em;font-family:var(--body)}
+p{margin:0}
+.lede{font-size:clamp(16.5px,2vw,20px);color:var(--ink-soft);max-width:60ch;margin-top:18px}
+.note{font-size:14.5px;color:var(--muted);max-width:66ch}
+.tiny{font-size:12px;color:var(--faint)}
+
+.eyebrow{
+  font-family:var(--mono);font-size:11.5px;font-weight:600;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--blue);
+  margin:0 0 18px;display:flex;align-items:center;gap:12px;
+}
+.eyebrow .no{color:var(--ink);font-weight:700}
+.eyebrow::after{content:"";height:1.5px;flex:1;max-width:110px;background:var(--ink)}
+.blue{color:var(--blue)}
+
+/* ── hero (kept from this project: plain, no full-bleed canvas) ── */
+.hero{padding-block:clamp(66px,12vh,124px) clamp(28px,5vh,56px)}
+.hero h1 .w{display:inline-block;opacity:0;transform:translateY(20px)}
+.hero h1.go .w{animation:rise .85s var(--ease) forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+.hero h1 .hl{font-style:normal;color:var(--signal)}
+.hero-sub{margin-top:26px;font-size:clamp(16.5px,2vw,20px);color:var(--ink-soft);max-width:56ch}
+
+/* hero stat strip — ink-ruled, hard shadow */
+.strip{
+  margin-top:clamp(38px,6vh,66px);
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:1.5px;background:var(--ink);
+  border:1.5px solid var(--ink);box-shadow:6px 6px 0 var(--ink);
+}
+.strip div{background:var(--card);padding:20px 20px 18px;min-width:0}
+.strip b{
+  display:block;font-family:var(--disp);font-weight:800;
+  font-size:clamp(28px,3.2vw,40px);line-height:1;letter-spacing:-.032em;
+  color:var(--blue);font-variant-numeric:tabular-nums;
+  white-space:nowrap;overflow:hidden;
+}
+.strip small{
+  display:block;margin-top:8px;font-family:var(--mono);font-size:10px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--muted);line-height:1.6;
+}
+
+/* ── cards: 1.5px ink rule + hard offset shadow ── */
+.card{
+  background:var(--card);border:1.5px solid var(--ink);border-radius:4px;
+  padding:clamp(22px,3.2vw,38px);min-width:0;
+  box-shadow:5px 5px 0 var(--ink);
+  transition:transform .35s var(--ease),box-shadow .35s var(--ease);
+}
+.card.raise{box-shadow:7px 7px 0 var(--ink)}
+.card:hover{transform:translate(-2px,-2px);box-shadow:9px 9px 0 var(--ink)}
+.grid-2{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.grid-3{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+
+.stat-card{position:relative;overflow:hidden}
+.stat-card .idx{
+  position:absolute;top:16px;right:18px;font-family:var(--mono);
+  font-size:10.5px;font-weight:700;color:var(--faint);letter-spacing:.1em;
+}
+.stat-card b{
+  font-family:var(--disp);font-weight:800;font-size:clamp(36px,4.4vw,52px);
+  letter-spacing:-.032em;font-variant-numeric:tabular-nums;color:var(--blue);
+  display:block;white-space:nowrap;overflow:hidden;
+}
+
+/* big figure — capped and shrink-safe so it can never leave the card */
+.giant{
+  font-family:var(--disp);font-weight:800;font-size:clamp(58px,10.5vw,124px);
+  line-height:1;letter-spacing:-.042em;color:var(--blue);
+  font-variant-numeric:tabular-nums;
+  max-width:100%;white-space:nowrap;overflow:hidden;
+}
+.giant-cap{font-size:clamp(15px,1.9vw,19px);color:var(--ink-soft);margin-top:14px;max-width:44ch}
+
+/* ── funnel ── */
+.funnel{display:grid;gap:13px;margin-top:30px}
+.frow{display:grid;grid-template-columns:82px minmax(0,1fr);gap:16px;align-items:center}
+.frow .lab{text-align:right;font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--muted)}
+.fbar{
+  height:50px;border-radius:3px;background:var(--blue);display:flex;align-items:center;
+  padding-inline:16px;color:#fff;font-family:var(--mono);font-weight:700;font-size:14.5px;
+  font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;
+  transform-origin:left center;transform:scaleX(0);transition:transform 1.3s var(--ease);
+  box-shadow:4px 4px 0 rgba(0,47,167,.22);position:relative;
+}
+.fbar::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.3) 50%,transparent 70%);
+  transform:translateX(-120%);
+}
+.in .fbar{transform:scaleX(1)}
+.in .fbar::after{animation:sheen 1.4s var(--ease) .9s}
+@keyframes sheen{to{transform:translateX(120%)}}
+.fbar>span{opacity:0;transition:opacity .5s ease .6s}
+.in .fbar>span{opacity:1}
+.fbar.thin{min-width:96px;height:40px}
+.fbar.tiny-bar{min-width:78px;height:40px;background:var(--ink);box-shadow:4px 4px 0 rgba(17,19,24,.2)}
+
+/* ── split bars ── */
+.split+.split{margin-top:28px}
+.split-head{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-bottom:10px}
+.split-head em{font-style:normal;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.track{height:44px;border-radius:3px;overflow:hidden;display:flex;background:var(--line-soft);border:1.5px solid var(--ink)}
+.track i{
+  display:flex;align-items:center;justify-content:center;font-style:normal;
+  font-family:var(--mono);font-size:12px;font-weight:700;color:#fff;
+  width:0;transition:width 1.4s var(--ease);white-space:nowrap;overflow:hidden;
+}
+.track i.mine{background:var(--teal)}
+.track i.theirs{background:var(--ink)}
+.track i.dim{background:var(--faint);color:var(--ink)}
+
+/* ── charts ── */
+figure{margin:0;min-width:0}
+figcaption{font-size:12.5px;color:var(--muted);margin-top:13px;font-family:var(--mono);line-height:1.55}
+svg{display:block;width:100%;height:auto;overflow:visible}
+.chart-frame{position:relative}
+.chart-frame::before,.chart-frame::after{content:"";position:absolute;width:10px;height:10px;border:1.5px solid var(--ink)}
+.chart-frame::before{top:-5px;left:-5px;border-right:0;border-bottom:0}
+.chart-frame::after{bottom:-5px;right:-5px;border-left:0;border-top:0}
+
+.tip{
+  position:fixed;z-index:70;pointer-events:none;opacity:0;
+  transform:translate(-50%,-125%);
+  background:var(--ink);color:#fff;padding:7px 11px;border-radius:3px;
+  font-family:var(--mono);font-size:11.5px;font-weight:600;white-space:nowrap;
+  box-shadow:3px 3px 0 rgba(17,19,24,.25);
+  transition:opacity .14s ease,transform .14s var(--ease);
+}
+.tip.on{opacity:1;transform:translate(-50%,-136%)}
+
+.hit{cursor:crosshair}
+.bar-rect{transform-origin:bottom;transform:scaleY(0);transition:transform 1s var(--spring)}
+.in .bar-rect{transform:scaleY(1)}
+.bar-h{transform-origin:left;transform:scaleX(0);transition:transform .9s var(--spring)}
+.in .bar-h{transform:scaleX(1)}
+.spark-path{fill:none;stroke:var(--blue);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1500;stroke-dashoffset:1500;transition:stroke-dashoffset 2.2s var(--ease)}
+.in .spark-path{stroke-dashoffset:0}
+.area{opacity:0;transition:opacity 1.2s ease .6s}
+.in .area{opacity:1}
+.dot-pt{opacity:0;transition:opacity .5s var(--spring)}
+.in .dot-pt{opacity:1}
+.ring{transition:stroke-dashoffset 1.6s var(--ease)}
+.cell{opacity:0;transition:opacity .5s var(--ease)}
+.in .cell{opacity:1}
+.seg{transition:opacity .18s}
+.seg:hover{opacity:.7}
+
+/* ── waffle / gauge ── */
+.waffle-legend{font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.95;margin-top:14px}
+.waffle-legend i{display:inline-block;width:11px;height:11px;margin-right:8px;vertical-align:-1px;border:1px solid rgba(17,19,24,.25)}
+.gauge-wrap{display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-top:28px}
+.gauge{position:relative;flex:0 0 auto;width:120px}
+.gauge .gval{
+  position:absolute;inset:0;display:grid;place-items:center;
+  font-family:var(--disp);font-weight:800;font-size:24px;color:var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+
+/* ── drift table ── */
+.drift{display:grid;margin-top:28px}
+.drow{display:grid;grid-template-columns:64px minmax(0,1fr);gap:18px;align-items:center;padding:15px 0;border-bottom:1px solid var(--line-soft);transition:background .3s}
+.drow:hover{background:var(--paper)}
+.drow:last-child{border-bottom:0}
+.drow .yr{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--faint)}
+.tags{display:flex;flex-wrap:wrap;gap:7px}
+.tag{
+  font-family:var(--mono);font-size:12px;font-weight:600;padding:5px 11px;border-radius:3px;
+  background:var(--line-soft);color:var(--ink-soft);border:1px solid var(--line);white-space:nowrap;
+  transition:transform .25s var(--spring),box-shadow .25s;
+}
+.tag:hover{transform:translate(-2px,-2px);box-shadow:3px 3px 0 var(--ink)}
+.tag.hot{background:#FFE9E3;border-color:var(--signal);color:#C22B12}
+.tag.new{background:#E2F3F1;border-color:var(--teal);color:#0A6F66}
+
+/* ── versus ── */
+.versus{display:grid;grid-template-columns:1fr auto 1fr;gap:clamp(16px,3vw,36px);align-items:start}
+.versus .vs{
+  align-self:center;font-family:var(--disp);font-weight:800;font-style:italic;font-size:17px;
+  color:var(--faint);padding:10px 15px;border:1.5px solid var(--ink);border-radius:100px;
+  background:var(--card);box-shadow:3px 3px 0 var(--ink);
+}
+.col-title{font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin:0 0 15px;font-family:var(--mono)}
+@media(max-width:680px){.versus{grid-template-columns:1fr}.versus .vs{justify-self:start}}
+
+/* ── split panel (giant + chart side by side) ── */
+.duo{display:flex;flex-wrap:wrap;gap:clamp(22px,4vw,46px);align-items:center}
+.duo>div{flex:1;min-width:274px}
+.duo .sep{border-left:1.5px solid var(--ink);padding-left:clamp(22px,4vw,46px)}
+@media(max-width:720px){.duo .sep{border-left:0;padding-left:0;border-top:1.5px solid var(--ink);padding-top:26px}}
+
+/* ── receipt ── */
+.receipt{
+  background:var(--ink);color:#F6F6F2;border-radius:5px;
+  padding:clamp(26px,4.2vw,50px);box-shadow:9px 9px 0 rgba(17,19,24,.22);
+  position:relative;overflow:hidden;
+}
+.receipt::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    linear-gradient(115deg,transparent 42%,rgba(255,77,46,.10) 50%,transparent 58%),
+    radial-gradient(420px 300px at 88% 8%,rgba(0,47,167,.30),transparent 70%);
+}
+.receipt h2{color:#fff}
+.receipt .lede{color:rgba(246,246,242,.76)}
+.receipt .note{color:rgba(246,246,242,.62)}
+.receipt .eyebrow{color:#FF9A80}
+.receipt .eyebrow .no{color:#fff}
+.receipt .eyebrow::after{background:rgba(246,246,242,.4)}
+.rrow{
+  display:flex;justify-content:space-between;align-items:baseline;gap:18px;padding:17px 0;
+  border-bottom:1px dashed rgba(246,246,242,.28);font-variant-numeric:tabular-nums;position:relative;
+}
+.rrow:last-of-type{border-bottom:0}
+.rrow b{font-family:var(--disp);font-size:clamp(24px,3.4vw,36px);font-weight:800;color:#fff;white-space:nowrap;flex:none}
+.rrow span{font-size:13.5px;color:rgba(246,246,242,.68);font-family:var(--mono);min-width:0}
+
+/* ── chips ── */
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+.chip{
+  font-family:var(--mono);font-size:12.5px;font-weight:500;padding:9px 15px;border-radius:3px;
+  background:var(--card);border:1.5px solid var(--ink);color:var(--ink-soft);
+  box-shadow:3px 3px 0 var(--ink);cursor:default;
+  opacity:0;transform:translateY(14px) scale(.94);transition:all .5s var(--spring);
+}
+.in .chip{opacity:1;transform:none}
+.chip:hover{transform:translate(-2px,-3px);color:var(--blue);border-color:var(--blue);box-shadow:5px 5px 0 var(--blue)}
+
+/* ── footer: simple and traditional ── */
+footer{border-top:1.5px solid var(--ink);padding:30px 0 44px}
+.foot{display:flex;flex-wrap:wrap;gap:14px 26px;align-items:center;justify-content:space-between}
+.foot p{font-size:13.5px;color:var(--muted)}
+.foot nav{display:flex;gap:22px}
+.foot a{font-size:13.5px;color:var(--muted);text-decoration:none;border-bottom:1.5px solid var(--line);padding-bottom:1px}
+.foot a:hover{color:var(--blue);border-color:var(--blue)}
+
+/* ── reveal ── */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .85s var(--ease),transform .85s var(--ease)}
+.reveal.in{opacity:1;transform:none}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px;border-radius:3px}
+
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}
+  .reveal,.chip,.cell,.dot-pt,.area{opacity:1;transform:none}
+  .hero h1 .w{opacity:1;transform:none}
+  .fbar{transform:scaleX(1)}.fbar>span{opacity:1}
+  .bar-rect{transform:scaleY(1)}.bar-h{transform:scaleX(1)}
+  .spark-path{stroke-dashoffset:0}
+  .card:hover{transform:none}
+}
+@media print{.rail-nav,.progress{display:none}section{padding-block:28px}}
+</style>
+</head>
+<body>
+
+<div class="progress" aria-hidden="true"><i></i></div>
+<div class="tip" id="tip" role="status" aria-live="polite"></div>
+<nav class="rail-nav" id="railNav" aria-label="Sections"></nav>
+
+<main>
+
+  <!-- ══ HERO ══ -->
+  <header class="hero wrap" id="top" data-nav="Opening">
+    <h1 id="h1">I let Instagram watch me for seven years. Then I read the file.</h1>
+    <p class="hero-sub">
+      Instagram will hand you everything it recorded about you. I downloaded my own export —
+      209 MB across 1,057 files — and counted all of it. Every reel, every story, every save,
+      every advertiser holding my name. Some of it I expected. One number made me put the
+      laptop down.
+    </p>
+
+    <div class="strip reveal" role="list">
+      <div role="listitem"><b data-count="203">0</b><small>reels / day</small></div>
+      <div role="listitem"><b data-count="601">0</b><small>hours / year</small></div>
+      <div role="listitem"><b data-count="882">0</b><small>posts saved</small></div>
+      <div role="listitem"><b data-count="6108">0</b><small>advertisers</small></div>
+    </div>
+  </header>
+
+
+  <!-- ══ 01 VOLUME ══ -->
+  <section class="wrap reveal" id="volume" data-nav="The volume">
+    <p class="eyebrow"><span class="no">01</span> — The volume</p>
+    <h2>Two hundred and three reels. Every single day.</h2>
+    <p class="lede">
+      Instagram only keeps about a week of viewing history, which turns out to be exactly enough
+      to catch you in the act. In seven days I watched 1,418 reels and 535 posts, and scrolled
+      4,978 stories in a month.
+    </p>
+
+    <div class="grid-3" style="margin-top:34px">
+      <div class="card stat-card"><span class="idx">FIG. 1.1</span><b data-count="203">0</b>
+        <p class="note" style="margin-top:8px"><strong>reels a day</strong><br>1,418 over 7 days</p></div>
+      <div class="card stat-card"><span class="idx">FIG. 1.2</span><b data-count="168">0</b>
+        <p class="note" style="margin-top:8px"><strong>stories a day</strong><br>4,978 over 30 days</p></div>
+      <div class="card stat-card"><span class="idx">FIG. 1.3</span><b data-count="54">0</b>
+        <p class="note" style="margin-top:8px"><strong>ads a day</strong><br>378 in one week</p></div>
+    </div>
+
+    <div class="card raise" style="margin-top:22px">
+      <div class="duo">
+        <div>
+          <p class="eyebrow" style="margin-bottom:12px"><span class="no">FIG. 1.4</span> — What that costs</p>
+          <p style="font-family:var(--disp);font-size:clamp(24px,3.4vw,36px);line-height:1.16;letter-spacing:-.022em;font-weight:750;max-width:26ch">
+            <strong class="blue" data-count="99">0</strong> minutes a day.<br>
+            <strong class="blue" data-count="601">0</strong> hours a year.
+          </p>
+          <p class="note" style="margin-top:14px">
+            Twenty-five entire days, at 25 seconds a reel and 5 seconds a story. Not estimated
+            from a screen-time widget — counted from the receipts.
+          </p>
+        </div>
+        <div class="sep">
+          <p class="eyebrow" style="margin-bottom:14px"><span class="no">FIG. 1.5</span> — Where it goes</p>
+          <figure class="chart-frame">
+            <svg id="ringChart" viewBox="0 0 320 196" role="img"
+              aria-label="Daily rates: 203 reels, 168 stories, 77 posts and 54 ads per day"></svg>
+            <figcaption>Hover a ring for the daily rate.</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <figure class="chart-frame" style="margin-top:30px;border-top:1px solid var(--line-soft);padding-top:26px">
+        <svg id="dotGrid" viewBox="0 0 320 118" role="img"
+          aria-label="365 dots representing days of the year, 25 highlighted as time spent on Instagram"></svg>
+        <figcaption>Each dot is a day of the year. The coloured ones are Instagram — 25 of 365.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+
+  <!-- ══ 02 FUNNEL ══ -->
+  <section class="wrap reveal" id="funnel" data-nav="The funnel">
+    <p class="eyebrow"><span class="no">02</span> — The funnel</p>
+    <h2>I scrolled past 1,953 posts to keep exactly one.</h2>
+    <p class="lede">
+      In the one week where Instagram kept the full record, here is everything that reached my
+      eyes, and everything that survived it.
+    </p>
+
+    <div class="card raise" style="margin-top:32px">
+      <div class="funnel">
+        <div class="frow"><span class="lab">Saw</span><div class="fbar"><span>1,953 posts &amp; reels</span></div></div>
+        <div class="frow"><span class="lab">Liked</span><div class="fbar thin" style="width:11%"><span>3</span></div></div>
+        <div class="frow"><span class="lab">Saved</span><div class="fbar tiny-bar" style="width:6%"><span>1</span></div></div>
+      </div>
+      <p class="note" style="margin-top:28px;border-top:1px solid var(--line-soft);padding-top:24px">
+        A <strong>0.05% save rate</strong>. I gave Instagram roughly 99 minutes a day and took
+        one thing back. The other 1,952 are gone and I could not name a single one of them.
+      </p>
+    </div>
+  </section>
+
+
+  <!-- ══ 03 ALGORITHM ══ -->
+  <section class="wrap reveal" id="algorithm" data-nav="The betrayal">
+    <p class="eyebrow"><span class="no">03</span> — The betrayal</p>
+    <h2>I follow 425 accounts. They barely matter.</h2>
+    <p class="lede">
+      This is the number that made me stop. I spent seven years carefully choosing who to follow.
+      Here is how much of what I actually saw came from those choices.
+    </p>
+
+    <div class="grid-2" style="margin-top:32px">
+      <figure class="card chart-frame">
+        <p class="eyebrow" style="margin-bottom:14px"><span class="no">FIG. 3.1</span> — Stories</p>
+        <svg id="donutStories" viewBox="0 0 260 192" role="img"
+          aria-label="Of 4,978 stories watched, 2 percent came from accounts I follow and 98 percent from accounts I do not"></svg>
+        <figcaption><strong>98%</strong> from accounts I have never followed.</figcaption>
+      </figure>
+      <figure class="card chart-frame">
+        <p class="eyebrow" style="margin-bottom:14px"><span class="no">FIG. 3.2</span> — Reels</p>
+        <svg id="donutReels" viewBox="0 0 260 192" role="img"
+          aria-label="Of 1,418 reels watched, 33 percent came from accounts I follow and 67 percent were chosen by the algorithm"></svg>
+        <figcaption><strong>67%</strong> chosen for me, not by me.</figcaption>
+      </figure>
+    </div>
+
+    <div class="card" style="margin-top:22px">
+      <div class="split">
+        <div class="split-head"><h3>Stories I watched</h3><em>4,978 stories</em></div>
+        <div class="track" role="img" aria-label="2 percent of stories watched came from accounts I follow; 98 percent from accounts I do not follow">
+          <i class="mine" data-w="2">2%</i><i class="theirs" data-w="98">98% from accounts I don't follow</i>
+        </div>
+      </div>
+      <div class="split">
+        <div class="split-head"><h3>Reels I watched</h3><em>1,418 reels</em></div>
+        <div class="track" role="img" aria-label="33 percent of reels watched came from accounts I follow; 67 percent chosen by the algorithm">
+          <i class="mine" data-w="33">33% mine</i><i class="theirs" data-w="67">67% chosen for me</i>
+        </div>
+      </div>
+      <p class="note" style="margin-top:28px;border-top:1px solid var(--line-soft);padding-top:24px">
+        <strong>Ninety-eight percent.</strong> I built a feed for seven years and Instagram
+        showed me strangers instead. My 425 follows shape a third of my reels and a fiftieth of
+        my stories. I wasn't using a social network. I was watching television that watches back.
+      </p>
+    </div>
+  </section>
+
+
+  <!-- ══ 04 FED VS KEPT ══ -->
+  <section class="wrap reveal" id="taste" data-nav="Fed vs kept">
+    <p class="eyebrow"><span class="no">04</span> — Fed vs kept</p>
+    <h2>What it served me. What I actually wanted.</h2>
+    <p class="lede">
+      Left: what the algorithm pushed at me last week. Right: what I chose to save over seven
+      years. They agree on almost nothing.
+    </p>
+
+    <div class="versus card raise" style="margin-top:32px">
+      <div>
+        <p class="col-title" style="color:var(--faint)">Fed to me</p>
+        <div class="tags">
+          <span class="tag">#instantbollywood</span><span class="tag">#gta6</span>
+          <span class="tag">#gaming</span><span class="tag">#samayraina</span>
+          <span class="tag">#gta5</span><span class="tag">#indiasgotlatent</span>
+          <span class="tag">#college</span><span class="tag">#viralvideos</span>
+          <span class="tag">#room</span>
+        </div>
+      </div>
+      <span class="vs">vs</span>
+      <div>
+        <p class="col-title" style="color:var(--signal)">What I kept</p>
+        <div class="tags">
+          <span class="tag hot">#anime</span><span class="tag hot">#dehradun</span>
+          <span class="tag hot">#marvel</span><span class="tag hot">#ironman</span>
+          <span class="tag hot">#avengers</span><span class="tag hot">#spiderman</span>
+          <span class="tag hot">#animeedits</span><span class="tag hot">#uttarakhand</span>
+          <span class="tag hot">#captainamerica</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" style="margin-top:22px">
+      Two overlaps in nine: <strong>#dehradun</strong> and <strong>#tech</strong>. The feed chases
+      whatever is trending this week. My saves have been the same person for seven years.
+    </p>
+  </section>
+
+
+  <!-- ══ 05 DRIFT ══ -->
+  <section class="wrap reveal" id="drift" data-nav="The drift">
+    <p class="eyebrow"><span class="no">05</span> — The drift</p>
+    <h2>My saved folder accidentally kept a diary.</h2>
+    <p class="lede">
+      I never wrote any of this down. But sorted by year, 882 saves describe a person changing
+      their mind about what matters.
+    </p>
+
+    <div class="card raise drift" style="margin-top:30px">
+      <div class="drow"><span class="yr">2019</span><div class="tags"><span class="tag">#ironman</span><span class="tag">#spiderman</span><span class="tag">#avengersendgame</span></div></div>
+      <div class="drow"><span class="yr">2020</span><div class="tags"><span class="tag">#blackwidow</span><span class="tag">#marvel</span><span class="tag">#disneyplus</span></div></div>
+      <div class="drow"><span class="yr">2021</span><div class="tags"><span class="tag">#marvel</span><span class="tag">#wandamaximoff</span><span class="tag">#avengers</span></div></div>
+      <div class="drow"><span class="yr">2022</span><div class="tags"><span class="tag">#rvcjinsta</span><span class="tag">#ironman</span><span class="tag">#spiderman</span></div></div>
+      <div class="drow"><span class="yr">2023</span><div class="tags"><span class="tag new">#anime</span><span class="tag new">#tech</span><span class="tag">#memes</span><em class="tiny" style="align-self:center;margin-left:4px;font-family:var(--mono)">← the pivot</em></div></div>
+      <div class="drow"><span class="yr">2024</span><div class="tags"><span class="tag new">#dehradun</span><span class="tag">#anime</span><span class="tag new">#uttarakhand</span></div></div>
+      <div class="drow"><span class="yr">2025</span><div class="tags"><span class="tag new">#dehradun</span><span class="tag">#streetfood</span><span class="tag">#otaku</span></div></div>
+      <div class="drow"><span class="yr">2026</span><div class="tags"><span class="tag">#anime</span><span class="tag">#manga</span><span class="tag">#dehradun</span></div></div>
+    </div>
+
+    <p class="note" style="margin-top:22px">
+      Four years of superheroes. A hard turn into anime in 2023. Then my own city becomes the
+      thing I save most. Nobody asked me these questions — the file just answered them.
+    </p>
+
+    <div class="grid-2" style="margin-top:22px">
+      <figure class="card chart-frame">
+        <p class="eyebrow" style="margin-bottom:16px"><span class="no">FIG. 5.1</span> — Video took over</p>
+        <svg id="areaChart" viewBox="0 0 380 168" role="img"
+          aria-label="Share of saves that are video rose from 11 percent in 2019 to 94 percent in 2023, settling near 80 percent by 2026"></svg>
+        <figcaption>Share of my saves that are video, 2019 → 2026. Hover the points.</figcaption>
+      </figure>
+      <figure class="card chart-frame">
+        <p class="eyebrow" style="margin-bottom:16px"><span class="no">FIG. 5.2</span> — When I save</p>
+        <svg id="clockChart" viewBox="0 0 320 200" role="img"
+          aria-label="Saves by hour of day peak at 11am, with only 8 percent happening between midnight and 6am"></svg>
+        <figcaption>Peak hour is <strong>11:00</strong>. Only 8% after midnight — not the doomscroller I assumed.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+
+  <!-- ══ 06 LONG TAIL ══ -->
+  <section class="wrap reveal" id="creators" data-nav="Long tail">
+    <p class="eyebrow"><span class="no">06</span> — The long tail</p>
+    <h2>682 creators. I saved 599 of them exactly once.</h2>
+
+    <div class="grid-2" style="margin-top:32px">
+      <figure class="card chart-frame">
+        <p class="eyebrow" style="margin-bottom:14px"><span class="no">FIG. 6.1</span> — The distribution</p>
+        <svg id="tailChart" viewBox="0 0 380 148" role="img"
+          aria-label="One creator was saved 41 times, a handful between 5 and 15 times, and hundreds only once"></svg>
+        <figcaption>One spike, then a very long tail of single saves. Hover the bars.</figcaption>
+      </figure>
+      <div class="card">
+        <p class="eyebrow" style="margin-bottom:16px"><span class="no">TABLE 6.1</span> — Top of the pile</p>
+        <figure class="chart-frame">
+          <svg id="topCreators" viewBox="0 0 340 160" role="img"
+            aria-label="Most saved creators: rvcjinsta 41, tru_feelings 15, chutiyapa 13, marvelworld 11, unfiltered mayur 10"></svg>
+        </figure>
+        <p class="note" style="margin-top:22px;border-top:1px solid var(--line-soft);padding-top:20px">
+          <strong>88%</strong> of creators I saved just once. I'm not a fan of anybody. I'm a
+          magpie — I take the shiny thing and never come back.
+        </p>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══ 07 LIKE VS SAVE ══ -->
+  <section class="wrap reveal" id="private" data-nav="Two selves">
+    <div class="card raise">
+      <div class="duo">
+        <div>
+          <p class="eyebrow"><span class="no">07</span> — Two different people</p>
+          <p class="giant" data-count="22">0</p>
+          <p class="giant-cap">
+            posts out of 882 that I both <strong>liked</strong> and <strong>saved</strong>.
+          </p>
+          <p class="note" style="margin-top:20px">
+            2,835 likes. 882 saves. Almost no overlap. A like is a wave in public; a save is a
+            note to myself. Turns out I run two completely separate accounts inside one app — and
+            only one of them is honest.
+          </p>
+        </div>
+        <div class="sep">
+          <p class="eyebrow" style="margin-bottom:14px"><span class="no">FIG. 7.1</span> — The overlap</p>
+          <figure class="chart-frame">
+            <svg id="waffle" viewBox="0 0 250 218" role="img"
+              aria-label="Waffle chart: 22 of 882 saved posts were also liked. Each square is one post."></svg>
+          </figure>
+          <p class="waffle-legend">
+            <i style="background:var(--signal)"></i> liked &amp; saved — 22 posts<br>
+            <i style="background:var(--off)"></i> saved only — 860 posts
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══ 08 TAKE VS GIVE ══ -->
+  <section class="wrap reveal" id="output" data-nav="Take vs give">
+    <p class="eyebrow"><span class="no">08</span> — Take vs give</p>
+    <h2>41 things consumed for every 1 made.</h2>
+
+    <div class="card raise" style="margin-top:30px">
+      <div class="split">
+        <div class="split-head"><h3>Consumed vs produced</h3><em>6,931 in · 171 out</em></div>
+        <div class="track" style="height:54px" role="img" aria-label="6,931 items consumed against 171 produced, a ratio of 41 to 1">
+          <i class="theirs" data-w="97.6">6,931 consumed</i><i class="dim" data-w="2.4">171</i>
+        </div>
+      </div>
+
+      <div class="gauge-wrap">
+        <div class="gauge">
+          <svg viewBox="0 0 120 120" role="img" aria-label="Radial gauge: 171 produced out of 7,102 interactions, 2.4 percent">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--line-soft)" stroke-width="12"/>
+            <circle class="ring" cx="60" cy="60" r="50" fill="none" stroke="var(--teal)" stroke-width="12"
+                    stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="314"
+                    data-off="306.5" transform="rotate(-90 60 60)"/>
+          </svg>
+          <span class="gval" data-count="2.4" data-suffix="%" data-decimals="1">0%</span>
+        </div>
+        <p class="note" style="max-width:30ch">
+          <strong>2.4% produced.</strong> 171 things made against 6,931 consumed across seven
+          years. The gauge is the whole argument, drawn once.
+        </p>
+      </div>
+
+      <div class="grid-3" style="margin-top:28px">
+        <div><b class="blue" style="font-family:var(--disp);font-size:32px;font-weight:800;display:block;white-space:nowrap" data-count="4">0</b><p class="note" style="margin-top:3px">posts, ever</p></div>
+        <div><b class="blue" style="font-family:var(--disp);font-size:32px;font-weight:800;display:block;white-space:nowrap" data-count="3">0</b><p class="note" style="margin-top:3px">reel comments</p></div>
+        <div><b class="blue" style="font-family:var(--disp);font-size:32px;font-weight:800;display:block;white-space:nowrap" data-count="1052">0</b><p class="note" style="margin-top:3px">comments I liked instead of writing</p></div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══ 09 RECEIPTS ══ -->
+  <section class="wrap reveal" id="receipts" data-nav="The receipts">
+    <div class="receipt">
+      <p class="eyebrow"><span class="no">09</span> — The part nobody checks</p>
+      <h2>6,108 advertisers already have my information.</h2>
+      <p class="lede">
+        This file is in every Instagram export and almost nobody opens it. Mine lists companies
+        that uploaded lists containing me — a cinema chain, a bus service, an Australian software
+        firm, a Taiwanese magazine. I have used exactly one of them.
+      </p>
+
+      <div style="margin-top:30px;position:relative">
+        <div class="rrow"><span>Advertisers holding my details</span><b data-count="6108">0</b></div>
+        <div class="rrow"><span>Phone contacts I handed over</span><b data-count="1650">0</b></div>
+        <div class="rrow"><span>Private messages recorded</span><b data-count="58521">0</b></div>
+        <div class="rrow"><span>Times I said "not interested"</span><b data-count="22">0</b></div>
+      </div>
+
+      <p class="note" style="margin-top:26px;position:relative">
+        58,521 messages across 316 conversations, and 44% of them went to just five people.
+        I never read a word of that file to make this page — only counted. But it is all sitting
+        there, in a folder, on my laptop, and it was sitting on theirs first.
+      </p>
+    </div>
+  </section>
+
+
+  <!-- ══ 10 SEARCHES ══ -->
+  <section class="wrap reveal" id="searches" data-nav="Eleven searches">
+    <p class="eyebrow"><span class="no">10</span> — Eleven searches</p>
+    <h2>The shortest, most accurate description of me.</h2>
+    <p class="lede">
+      Instagram kept only eleven of my searches. Somehow they say more than the other 208 MB.
+    </p>
+
+    <div class="card raise" style="margin-top:30px">
+      <div class="chips" style="margin-top:0">
+        <span class="chip">dehradun</span><span class="chip">crochet</span>
+        <span class="chip">handcraft dehradun</span><span class="chip">crochet dehradun</span>
+        <span class="chip">gifts near me</span><span class="chip">craftique gifts jaipur</span>
+        <span class="chip">foodibus</span><span class="chip">fitgirl</span>
+        <span class="chip">introvert</span><span class="chip">madstryke</span>
+        <span class="chip">madhavi__821</span>
+      </div>
+      <p class="note" style="margin-top:26px;border-top:1px solid var(--line-soft);padding-top:22px">
+        And five folders I made to organise 882 saves:
+        <strong>Ai</strong>, <strong>Places in dehradun</strong>, <strong>AL</strong>,
+        <strong>Anime</strong>, <strong>Wallpaper</strong>. Two of them I never filled.
+      </p>
+    </div>
+  </section>
+
+
+  <!-- ══ 11 GRAVEYARD ══ -->
+  <section class="wrap reveal" id="graveyard" data-nav="The graveyard">
+    <div class="card raise">
+      <div class="duo">
+        <div>
+          <p class="eyebrow"><span class="no">11</span> — The graveyard</p>
+          <p class="giant" data-count="882">0</p>
+          <p class="giant-cap">
+            posts saved across seven years. <strong>5.3 hours</strong> of video I told myself I'd
+            come back to.
+          </p>
+          <p class="note" style="margin-top:20px">
+            I could not search a single one of them. Instagram gives you a folder and no way to
+            look inside it — no keywords, no topics, nothing. So I saved 882 things into a room
+            with the lights off.
+          </p>
+        </div>
+        <div class="sep">
+          <p class="eyebrow" style="margin-bottom:14px"><span class="no">FIG. 11.1</span> — The backlog</p>
+          <figure class="chart-frame">
+            <svg id="graveChart" viewBox="0 0 380 152" role="img"
+              aria-label="Bar chart of saves per year from 2019 to 2026, peaking at 183 in 2022"></svg>
+            <figcaption>882 saves by year. The pile grew fastest exactly when I stopped rewatching.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <div class="foot">
+    <p>© 2026 Aryav. All rights reserved.</p>
+    <nav aria-label="Footer">
+      <a href="#top">Back to top</a>
+      <a href="#method-note">Method</a>
+    </nav>
+  </div>
+  <p class="tiny" id="method-note" style="margin-top:14px;font-family:var(--mono)">
+    Computed locally from my own Instagram data export by counting rows. Message contents were
+    never read — only per-conversation totals. No third-party names appear on this page.
+  </p>
+</footer>
+
+<script>
+(() => {
+"use strict";
+const NS = "http://www.w3.org/2000/svg";
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const el = (n, a = {}) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
+
+/* ── hero headline, word by word ── */
+{
+  const h1 = document.getElementById("h1");
+  const words = h1.textContent.trim().split(/\s+/);
+  h1.textContent = "";
+  words.forEach((w, i) => {
+    const s = document.createElement("span");
+    s.className = "w";
+    if (w === "seven") s.classList.add("hl");
+    s.textContent = w;
+    s.style.animationDelay = (i * 40) + "ms";
+    h1.append(s, document.createTextNode(" "));
+  });
+  requestAnimationFrame(() => h1.classList.add("go"));
+}
+
+/* ── shared tooltip ── */
+const tip = document.getElementById("tip");
+const bindTip = (node, text) => {
+  const show = () => {
+    const r = node.getBoundingClientRect();
+    tip.textContent = text;
+    tip.style.left = (r.left + r.width / 2) + "px";
+    tip.style.top = r.top + "px";
+    tip.classList.add("on");
+  };
+  const hide = () => tip.classList.remove("on");
+  node.classList.add("hit");
+  node.setAttribute("tabindex", "0");
+  node.addEventListener("pointerenter", show);
+  node.addEventListener("pointermove", show);
+  node.addEventListener("pointerleave", hide);
+  node.addEventListener("focus", show);
+  node.addEventListener("blur", hide);
+};
+
+/* ── FIG 1.5 · concentric rings ── */
+{
+  const svg = document.getElementById("ringChart");
+  const data = [
+    { k: "Reels",   v: 203, c: "var(--blue)" },
+    { k: "Stories", v: 168, c: "var(--signal)" },
+    { k: "Posts",   v: 77,  c: "var(--teal)" },
+    { k: "Ads",     v: 54,  c: "var(--amber)" }
+  ];
+  const cx = 96, cy = 96, max = 210;
+  data.forEach((d, i) => {
+    const r = 78 - i * 16.5;
+    const C = 2 * Math.PI * r;
+    svg.appendChild(el("circle", { cx, cy, r, fill: "none", stroke: "var(--line-soft)", "stroke-width": 11 }));
+    const arc = el("circle", {
+      cx, cy, r, fill: "none", stroke: d.c, "stroke-width": 11, "stroke-linecap": "butt",
+      "stroke-dasharray": C, "stroke-dashoffset": C, class: "ring",
+      transform: "rotate(-90 " + cx + " " + cy + ")", style: "transition-delay:" + (i * 120) + "ms"
+    });
+    arc.dataset.off = String(C * (1 - d.v / max));
+    svg.appendChild(arc);
+    bindTip(arc, d.k + " · " + d.v + "/day");
+
+    const ly = 44 + i * 25;
+    svg.appendChild(el("rect", { x: 206, y: ly - 9, width: 9, height: 9, fill: d.c }));
+    const t1 = el("text", { x: 222, y: ly, fill: "var(--ink-soft)", "font-size": 11, "font-family": "var(--mono)" });
+    t1.textContent = d.k;
+    svg.appendChild(t1);
+    const t2 = el("text", { x: 306, y: ly, fill: "var(--muted)", "font-size": 11, "text-anchor": "end", "font-family": "var(--mono)" });
+    t2.textContent = d.v;
+    svg.appendChild(t2);
+  });
+  const c1 = el("text", { x: cx, y: cy + 2, "text-anchor": "middle", fill: "var(--ink)", "font-size": 24, "font-weight": 800, "font-family": "var(--disp)" });
+  c1.textContent = "203";
+  svg.appendChild(c1);
+  const c2 = el("text", { x: cx, y: cy + 17, "text-anchor": "middle", fill: "var(--muted)", "font-size": 9, "font-family": "var(--mono)" });
+  c2.textContent = "REELS/DAY";
+  svg.appendChild(c2);
+}
+
+/* ── 365 day squares ── */
+{
+  const svg = document.getElementById("dotGrid");
+  const per = 37, s = 5.4, gap = 3.1;
+  for (let i = 0; i < 365; i++) {
+    const hot = i < 25;
+    svg.appendChild(el("rect", {
+      x: 3 + (i % per) * (s + gap), y: 4 + Math.floor(i / per) * (s + gap),
+      width: s, height: s, fill: hot ? "var(--signal)" : "var(--off)", class: "cell",
+      style: reduce ? "" : "transition-delay:" + (i * 2.4) + "ms"
+    }));
+  }
+}
+
+/* ── FIG 3.x · donuts ── */
+const donut = (id, pct, labelA, labelB, total) => {
+  const svg = document.getElementById(id);
+  const cx = 86, cy = 92, r = 56, w = 19, C = 2 * Math.PI * r;
+  svg.appendChild(el("circle", { cx, cy, r, fill: "none", stroke: "var(--ink)", "stroke-width": w }));
+  const mine = el("circle", {
+    cx, cy, r, fill: "none", stroke: "var(--teal)", "stroke-width": w,
+    "stroke-dasharray": C, "stroke-dashoffset": C, class: "ring",
+    transform: "rotate(-90 " + cx + " " + cy + ")"
+  });
+  mine.dataset.off = String(C * (1 - pct / 100));
+  svg.appendChild(mine);
+  bindTip(mine, labelA + " · " + pct + "%");
+
+  const big = el("text", { x: cx, y: cy + 6, "text-anchor": "middle", fill: "var(--ink)", "font-size": 30, "font-weight": 800, "font-family": "var(--disp)" });
+  big.textContent = (100 - pct) + "%";
+  svg.appendChild(big);
+  const sm = el("text", { x: cx, y: cy + 21, "text-anchor": "middle", fill: "var(--muted)", "font-size": 8.5, "font-family": "var(--mono)" });
+  sm.textContent = "NOT MINE";
+  svg.appendChild(sm);
+
+  [[labelA, pct, "var(--teal)"], [labelB, 100 - pct, "var(--ink)"]].forEach((row, i) => {
+    const y = 72 + i * 30;
+    svg.appendChild(el("rect", { x: 168, y: y - 9, width: 9, height: 9, fill: row[2] }));
+    const t = el("text", { x: 184, y, fill: "var(--ink)", "font-size": 12, "font-weight": 700, "font-family": "var(--mono)" });
+    t.textContent = row[1] + "%";
+    svg.appendChild(t);
+    const t2 = el("text", { x: 184, y: y + 13, fill: "var(--muted)", "font-size": 9, "font-family": "var(--mono)" });
+    t2.textContent = row[0];
+    svg.appendChild(t2);
+  });
+  const tt = el("text", { x: 168, y: 146, fill: "var(--faint)", "font-size": 9, "font-family": "var(--mono)" });
+  tt.textContent = total;
+  svg.appendChild(tt);
+};
+donut("donutStories", 2, "I follow", "strangers", "4,978 stories");
+donut("donutReels", 33, "I follow", "algorithm", "1,418 reels");
+
+/* ── FIG 5.1 · video share ── */
+{
+  const svg = document.getElementById("areaChart");
+  const data = [[2019,11],[2020,10],[2021,21],[2022,68],[2023,94],[2024,80],[2025,83],[2026,80]];
+  const W = 380, H = 168, L = 30, R = 12, T = 14, B = 28;
+  const x = i => L + i * ((W - L - R) / (data.length - 1));
+  const y = v => T + (100 - v) / 100 * (H - T - B);
+
+  [0, 50, 100].forEach(v => {
+    svg.appendChild(el("line", { x1: L, y1: y(v), x2: W - R, y2: y(v), stroke: "var(--line-soft)", "stroke-width": 1 }));
+    const t = el("text", { x: 0, y: y(v) + 4, fill: "var(--faint)", "font-size": 9.5, "font-family": "var(--mono)" });
+    t.textContent = v + "%";
+    svg.appendChild(t);
+  });
+
+  const defs = el("defs");
+  const ag = el("linearGradient", { id: "ag", x1: "0", y1: "0", x2: "0", y2: "1" });
+  ag.append(
+    el("stop", { offset: "0", "stop-color": "var(--blue)", "stop-opacity": ".18" }),
+    el("stop", { offset: "1", "stop-color": "var(--blue)", "stop-opacity": "0" })
+  );
+  defs.append(ag);
+  svg.appendChild(defs);
+
+  const d = data.map((p, i) => (i ? "L" : "M") + x(i) + "," + y(p[1])).join("");
+  svg.appendChild(el("path", { d: d + "L" + x(data.length - 1) + "," + y(0) + "L" + x(0) + "," + y(0) + "Z", fill: "url(#ag)", class: "area" }));
+  svg.appendChild(el("path", { d, class: "spark-path" }));
+
+  data.forEach((p, i) => {
+    svg.appendChild(el("circle", {
+      cx: x(i), cy: y(p[1]), r: 4, fill: "var(--card)", stroke: "var(--blue)", "stroke-width": 2.2,
+      class: "dot-pt", style: "transition-delay:" + (600 + i * 100) + "ms"
+    }));
+    const pad = el("circle", { cx: x(i), cy: y(p[1]), r: 13, fill: "transparent" });
+    svg.appendChild(pad);
+    bindTip(pad, p[0] + " · " + p[1] + "% video");
+    const t = el("text", { x: x(i), y: H - 8, fill: "var(--faint)", "font-size": 9.5, "text-anchor": "middle", "font-family": "var(--mono)" });
+    t.textContent = "'" + String(p[0]).slice(2);
+    svg.appendChild(t);
+  });
+}
+
+/* ── FIG 5.2 · radial clock ── */
+{
+  const svg = document.getElementById("clockChart");
+  const hours = [35,15,9,2,2,7,16,8,50,47,54,79,49,40,37,43,37,55,68,48,46,42,47,46];
+  const cx = 158, cy = 96, r0 = 27, rMax = 82, max = Math.max(...hours);
+  hours.forEach((v, i) => {
+    const a0 = (i / 24) * Math.PI * 2 - Math.PI / 2 + .016;
+    const a1 = ((i + 1) / 24) * Math.PI * 2 - Math.PI / 2 - .016;
+    const rr = r0 + (v / max) * (rMax - r0);
+    const p = (a, rad) => [cx + Math.cos(a) * rad, cy + Math.sin(a) * rad];
+    const [x0, y0] = p(a0, r0), [x1, y1] = p(a1, r0), [x2, y2] = p(a1, rr), [x3, y3] = p(a0, rr);
+    const peak = v === max;
+    const seg = el("path", {
+      d: "M" + x0 + "," + y0 + "A" + r0 + "," + r0 + " 0 0 1 " + x1 + "," + y1 +
+         "L" + x2 + "," + y2 + "A" + rr + "," + rr + " 0 0 0 " + x3 + "," + y3 + "Z",
+      fill: peak ? "var(--signal)" : (i < 6 ? "var(--off)" : "var(--blue)"),
+      opacity: peak ? 1 : (i < 6 ? 1 : .42), class: "seg"
+    });
+    svg.appendChild(seg);
+    bindTip(seg, String(i).padStart(2, "0") + ":00 · " + v + " saves");
+  });
+  ["00", "06", "12", "18"].forEach((lbl, i) => {
+    const a = (i * 6 / 24) * Math.PI * 2 - Math.PI / 2;
+    const t = el("text", {
+      x: cx + Math.cos(a) * (rMax + 13), y: cy + Math.sin(a) * (rMax + 13) + 3.5,
+      fill: "var(--faint)", "font-size": 9.5, "text-anchor": "middle", "font-family": "var(--mono)"
+    });
+    t.textContent = lbl;
+    svg.appendChild(t);
+  });
+  const c1 = el("text", { x: cx, y: cy + 2, "text-anchor": "middle", fill: "var(--signal)", "font-size": 15, "font-weight": 800, "font-family": "var(--disp)" });
+  c1.textContent = "11am";
+  svg.appendChild(c1);
+  const c2 = el("text", { x: cx, y: cy + 15, "text-anchor": "middle", fill: "var(--muted)", "font-size": 8, "font-family": "var(--mono)" });
+  c2.textContent = "PEAK";
+  svg.appendChild(c2);
+}
+
+/* ── FIG 6.1 · long tail ── */
+{
+  const svg = document.getElementById("tailChart");
+  const bars = [41,15,13,11,10,6,6,5,4,4,4,4,3,3,3,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1];
+  const W = 380, H = 148, T = 10, B = 22, max = 41, bw = W / bars.length;
+  bars.forEach((v, i) => {
+    const h = (v / max) * (H - T - B);
+    const rect = el("rect", {
+      x: i * bw + .8, y: H - B - h, width: bw - 1.6, height: Math.max(h, 1.6),
+      fill: i === 0 ? "var(--signal)" : i < 5 ? "var(--blue)" : "var(--off)",
+      class: "bar-rect", style: "transition-delay:" + (i * 16) + "ms"
+    });
+    svg.appendChild(rect);
+    bindTip(rect, (v === 1 ? "one of 599 creators" : "creator #" + (i + 1)) + " · " + v + " saves");
+  });
+  const t = el("text", { x: W - 2, y: H - 6, fill: "var(--faint)", "font-size": 9.5, "text-anchor": "end", "font-family": "var(--mono)" });
+  t.textContent = "599 saved exactly once";
+  svg.appendChild(t);
+}
+
+/* ── TABLE 6.1 · top creators ── */
+{
+  const svg = document.getElementById("topCreators");
+  const rows = [["rvcjinsta",41],["tru_feelings",15],["_.chutiyapa._",13],["marvelworld.in",11],["_unfiltered_mayur",10]];
+  const W = 340, L = 126, max = 41, bh = 18, gap = 12;
+  rows.forEach((row, i) => {
+    const y = 10 + i * (bh + gap);
+    const t = el("text", { x: L - 9, y: y + 13, fill: "var(--ink-soft)", "font-size": 10.5, "text-anchor": "end", "font-family": "var(--mono)" });
+    t.textContent = "@" + row[0];
+    svg.appendChild(t);
+    svg.appendChild(el("rect", { x: L, y, width: W - L - 26, height: bh, fill: "var(--line-soft)" }));
+    const bar = el("rect", {
+      x: L, y, width: (row[1] / max) * (W - L - 26), height: bh,
+      fill: i === 0 ? "var(--signal)" : "var(--blue)", opacity: i === 0 ? 1 : .68,
+      class: "bar-h", style: "transition-delay:" + (i * 90) + "ms"
+    });
+    svg.appendChild(bar);
+    bindTip(bar, "@" + row[0] + " · " + row[1] + " saves");
+    const v = el("text", { x: W - 20, y: y + 13, fill: "var(--muted)", "font-size": 10.5, "text-anchor": "end", "font-family": "var(--mono)" });
+    v.textContent = row[1];
+    svg.appendChild(v);
+  });
+}
+
+/* ── FIG 7.1 · waffle, 882 squares with 22 highlighted ── */
+{
+  const svg = document.getElementById("waffle");
+  const per = 30, s = 6.6, gap = 1.8;
+  for (let i = 0; i < 882; i++) {
+    const hot = i < 22;
+    const r = el("rect", {
+      x: 2 + (i % per) * (s + gap), y: 2 + Math.floor(i / per) * (s + gap),
+      width: s, height: s, fill: hot ? "var(--signal)" : "var(--off)", class: "cell",
+      style: reduce ? "" : "transition-delay:" + (i * 0.9) + "ms"
+    });
+    svg.appendChild(r);
+    if (hot) bindTip(r, "liked AND saved · 1 of 22");
+  }
+}
+
+/* ── FIG 11.1 · saves per year ── */
+{
+  const svg = document.getElementById("graveChart");
+  const data = [[2019,45],[2020,21],[2021,39],[2022,183],[2023,128],[2024,179],[2025,132],[2026,155]];
+  const W = 380, H = 152, L = 4, R = 4, T = 12, B = 24;
+  const max = Math.max(...data.map(d => d[1]));
+  const bw = (W - L - R) / data.length;
+  data.forEach(([yr, v], i) => {
+    const h = (v / max) * (H - T - B);
+    const peak = v === max;
+    const rect = el("rect", {
+      x: L + i * bw + 3, y: H - B - h, width: bw - 6, height: Math.max(h, 2),
+      fill: peak ? "var(--signal)" : "var(--blue)", opacity: peak ? 1 : .78,
+      class: "bar-rect", style: "transition-delay:" + (i * 65) + "ms"
+    });
+    svg.appendChild(rect);
+    bindTip(rect, yr + " · " + v + " saves");
+    const t = el("text", { x: L + i * bw + bw / 2, y: H - 8, fill: "var(--faint)", "font-size": 9.5, "text-anchor": "middle", "font-family": "var(--mono)" });
+    t.textContent = "'" + String(yr).slice(2);
+    svg.appendChild(t);
+  });
+  const lbl = el("text", { x: L + 3 * bw + bw / 2, y: T - 1, fill: "var(--signal)", "font-size": 10, "font-weight": 700, "text-anchor": "middle", "font-family": "var(--mono)" });
+  lbl.textContent = "▲ 183";
+  svg.appendChild(lbl);
+}
+
+/* ── count-up, reveal, fills ── */
+const fmt = (n, dec) => dec ? n.toFixed(dec) : Math.round(n).toLocaleString("en-US");
+const countUp = (node, target) => {
+  const dec = Number(node.dataset.decimals || 0);
+  const suf = node.dataset.suffix || "";
+  if (reduce) { node.textContent = fmt(target, dec) + suf; return; }
+  const dur = 1500, t0 = performance.now();
+  const tick = now => {
+    const p = Math.min((now - t0) / dur, 1);
+    node.textContent = fmt(target * (1 - Math.pow(1 - p, 4)), dec) + suf;
+    if (p < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+};
+
+const activate = node => {
+  node.classList.add("in");
+  node.querySelectorAll("[data-count]").forEach(n => {
+    if (n.dataset.done) return;
+    n.dataset.done = "1";
+    countUp(n, Number(n.dataset.count));
+  });
+  node.querySelectorAll(".track i[data-w]").forEach(n => { n.style.width = n.dataset.w + "%"; });
+  node.querySelectorAll(".ring[data-off]").forEach(n => { n.style.strokeDashoffset = n.dataset.off; });
+};
+
+const io = new IntersectionObserver((entries, obs) => {
+  entries.forEach(e => { if (e.isIntersecting) { activate(e.target); obs.unobserve(e.target); } });
+}, { threshold: .14, rootMargin: "0px 0px -6% 0px" });
+document.querySelectorAll(".reveal, .card, figure, .strip, .receipt").forEach(n => io.observe(n));
+
+const strip = document.querySelector(".strip");
+if (strip) { activate(strip); io.unobserve(strip); }
+
+/* ── rail nav + scroll progress ── */
+{
+  const zones = [...document.querySelectorAll("[data-nav]")];
+  const nav = document.getElementById("railNav");
+  zones.forEach(z => {
+    const a = document.createElement("a");
+    a.href = "#" + z.id;
+    const d = document.createElement("span"); d.className = "dot";
+    const n = document.createElement("span"); n.className = "nm"; n.textContent = z.dataset.nav;
+    a.append(d, n);
+    nav.appendChild(a);
+  });
+  const links = [...nav.querySelectorAll("a")];
+  const bar = document.querySelector(".progress i");
+  let queued = false;
+  const onScroll = () => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      const max = document.documentElement.scrollHeight - innerHeight;
+      bar.style.width = (max > 0 ? (scrollY / max) * 100 : 0) + "%";
+      const mid = scrollY + innerHeight * .4;
+      let active = 0;
+      zones.forEach((z, i) => { if (z.offsetTop <= mid) active = i; });
+      links.forEach((l, i) => l.setAttribute("aria-current", String(i === active)));
+      tip.classList.remove("on");
+    });
+  };
+  addEventListener("scroll", onScroll, { passive: true });
+  addEventListener("resize", onScroll);
+  onScroll();
+}
+})();
+</script>
+
+<!--
+  Vercel Web Analytics. The queue shim has to come first so any call made before
+  script.js finishes loading is buffered rather than thrown away. `/_vercel/insights/`
+  is served by Vercel itself once Web Analytics is enabled on the project, so this
+  tag does nothing at all when the page is opened locally or from any other host.
+-->
+<script>
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
+
+</body>
+</html>

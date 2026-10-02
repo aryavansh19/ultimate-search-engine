@@ -1,0 +1,13 @@
+{
+  "_comment": "Simulates what an iOS share extension can send once it reads the page in a WKWebView carrying the user's own Instagram session. Field names are deliberately client-friendly; the extractor aliases them onto envelope fields.",
+  "username": "pastagrannies",
+  "profile_url": "https://www.instagram.com/pastagrannies/",
+  "caption": "Nonna Maria makes orecchiette by hand in Puglia. Just semolina flour and water, no eggs, rolled and dragged with a knife then shaped over her thumb. She has been doing this for sixty years. #pasta #orecchiette #puglia #handmadepasta #italianfood",
+  "thumbnail": "https://scontent.cdninstagram.com/v/example-thumb.jpg",
+  "video_url": "https://scontent.cdninstagram.com/v/example-reel.mp4",
+  "duration": 47,
+  "taken_at": 1748102400,
+  "likes": 128400,
+  "comments": 2213,
+  "views": 1840000
+}

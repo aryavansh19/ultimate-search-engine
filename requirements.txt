@@ -1,0 +1,15 @@
+# Core extraction layer dependencies.
+#
+# Versions are pinned deliberately. One exception: yt-dlp is date-versioned and
+# its site extractors break whenever a platform changes its internals, so it
+# carries a floor constraint instead of an exact pin. Bump it often and on purpose
+# (`pip install -U yt-dlp`) rather than letting it drift silently.
+
+pydantic==2.9.2
+httpx==0.27.2
+beautifulsoup4==4.12.3
+python-dotenv==1.0.1
+numpy==2.2.1
+fastapi==0.115.6
+uvicorn==0.34.0
+yt-dlp>=2024.12.13
