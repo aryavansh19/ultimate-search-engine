@@ -11,3 +11,4 @@ deploy/
 .kiro/
 .git/
 *.sqlite3
+*cookies*.txt

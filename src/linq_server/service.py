@@ -23,6 +23,7 @@ the service just has to not flatten it.
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
 
 from enrichment import Enricher, EnrichmentConfig
@@ -83,7 +84,15 @@ class AnalysisService:
     def capabilities(self) -> dict[str, object]:
         vector_ok, vector_reason = self.embedder.availability()
         model, dim = self.embedder.signature
+        cookie_file = self.extractor_config.cookie_file
         return {
+            "extraction": {
+                # Booleans only: lets you confirm the Instagram cookies secret file is
+                # mounted without exposing anything about it.
+                "cookie_file_configured": bool(cookie_file),
+                "cookie_file_found": bool(cookie_file) and os.path.isfile(cookie_file),
+                "managed_api": self.extractor_config.managed_api.enabled,
+            },
             "enrichment": {
                 "text_model": self.enrichment_config.text_model,
                 "media_model": self.enrichment_config.media_model,
@@ -103,7 +112,14 @@ class AnalysisService:
     # ----------------------------------------------------------------------- analyze
     def analyze(self, request: AnalyzeRequest) -> AnalyzeResponse:
         """Extract, enrich, chunk and embed one link. Blocking; call off the event loop."""
-        result = self.cascade.extract(request.url, client_payload=request.client_payload())
+        # retry_degraded: a link that failed extraction earlier (Instagram blocking an
+        # anonymous request, cookies not yet configured) must be tried again rather than
+        # served from cache as a permanent failure. Successful extractions still hit cache.
+        result = self.cascade.extract(
+            request.url,
+            client_payload=request.client_payload(),
+            retry_degraded=True,
+        )
         envelope = result.envelope
 
         mode = EnrichmentMode.MEDIA if request.force_media else None

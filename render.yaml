@@ -19,6 +19,11 @@ services:
       # Free instances have an ephemeral disk; this is only a content cache.
       - key: EXTRACTOR_CACHE_PATH
         value: /tmp/linq_cache/extractor_cache.sqlite3
+      # Instagram login cookies (Netscape cookies.txt) for the yt-dlp tier. Upload the
+      # file in the Dashboard: Environment -> Secret Files -> filename
+      # "instagram_cookies.txt". Until it exists the server runs anonymously.
+      - key: EXTRACTOR_COOKIE_FILE
+        value: /etc/secrets/instagram_cookies.txt
       # Prompted for during Blueprint setup; never committed.
       - key: GEMINI_API_KEY
         sync: false

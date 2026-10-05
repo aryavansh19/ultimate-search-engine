@@ -21,7 +21,10 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
+import shutil
+import tempfile
 from functools import lru_cache
 from typing import Any
 from urllib.parse import urlparse, urlunparse
@@ -102,15 +105,22 @@ class YtDlpExtractor(Extractor):
             "nocheckcertificate": False,
             "http_headers": {"User-Agent": self.config.user_agent},
         }
+        cookie_copy: str | None = None
         if self.config.cookie_file:
-            options["cookiefile"] = self.config.cookie_file
+            cookie_copy = _private_cookie_copy(self.config.cookie_file)
+            if cookie_copy:
+                options["cookiefile"] = cookie_copy
         elif self.config.cookies_from_browser:
             options["cookiesfrombrowser"] = _parse_browser_spec(
                 self.config.cookies_from_browser
             )
 
-        with yt_dlp.YoutubeDL(options) as ydl:
-            info = ydl.extract_info(fetch_url, download=False)
+        try:
+            with yt_dlp.YoutubeDL(options) as ydl:
+                info = ydl.extract_info(fetch_url, download=False)
+        finally:
+            if cookie_copy:
+                _remove_quietly(cookie_copy)
 
         if not info:
             return None
@@ -262,6 +272,47 @@ def _with_www(url: str) -> str | None:
     if not parsed.netloc or parsed.netloc.startswith("www."):
         return None
     return urlunparse(parsed._replace(netloc=f"www.{parsed.netloc}"))
+
+
+_warned_cookie_paths: set[str] = set()
+
+
+def _private_cookie_copy(path: str) -> str | None:
+    """Copy the configured cookies file to a private temp file for one yt-dlp run.
+
+    yt-dlp writes its cookie jar back to `cookiefile` when it closes. Pointing it at
+    the original breaks in two ways: a Render secret file lives under /etc/secrets,
+    which the app may not be able to write, so the write-back raises after the
+    extraction already succeeded and the whole tier is recorded as failed; and
+    concurrent requests would race on one file. A fresh owner-only copy per run
+    avoids both. Cookie updates yt-dlp would write back are discarded; the login
+    session itself stays valid until it expires or is logged out.
+
+    A missing or unreadable file degrades to an anonymous run instead of failing.
+    """
+    try:
+        fd, copy_path = tempfile.mkstemp(prefix="ytdlp-cookies-", suffix=".txt")
+    except OSError as exc:
+        log.warning("cannot create temp cookie copy (%s); continuing without cookies", exc)
+        return None
+    try:
+        with os.fdopen(fd, "wb") as out, open(path, "rb") as src:
+            shutil.copyfileobj(src, out)
+    except OSError as exc:
+        _remove_quietly(copy_path)
+        if path not in _warned_cookie_paths:
+            _warned_cookie_paths.add(path)
+            log.warning("cookie file %s unreadable (%s); continuing without cookies",
+                        path, exc)
+        return None
+    return copy_path
+
+
+def _remove_quietly(path: str) -> None:
+    try:
+        os.remove(path)
+    except OSError:
+        pass
 
 
 def _parse_browser_spec(spec: str) -> tuple[str | None, ...]:
