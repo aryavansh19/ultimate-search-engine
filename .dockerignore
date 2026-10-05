@@ -1,0 +1,13 @@
+.venv/
+**/__pycache__/
+*.pyc
+.env
+.env.local
+data/
+saved_posts.json
+samples/
+web/
+deploy/
+.kiro/
+.git/
+*.sqlite3

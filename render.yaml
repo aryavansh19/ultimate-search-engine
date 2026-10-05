@@ -1,0 +1,28 @@
+# Render Blueprint for the LinQ enrichment API (free plan, native Python runtime).
+# Deploy: Render Dashboard -> New -> Blueprint -> pick this repo.
+services:
+  - type: web
+    name: linq-enrichment
+    runtime: python
+    plan: free
+    region: singapore          # closest Render region to India
+    buildCommand: pip install -r requirements.txt
+    # --app-dir src puts the src/ packages (linq_server, extractor, enrichment, search)
+    # on sys.path, so no package install step is needed. Render injects $PORT.
+    startCommand: uvicorn linq_server.main:app --app-dir src --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Auth stays on: every /v1/analyze call spends Gemini quota.
+      - key: LINQ_REQUIRE_AUTH
+        value: "1"
+      # Free instances have an ephemeral disk; this is only a content cache.
+      - key: EXTRACTOR_CACHE_PATH
+        value: /tmp/linq_cache/extractor_cache.sqlite3
+      # Prompted for during Blueprint setup; never committed.
+      - key: GEMINI_API_KEY
+        sync: false
+      # Render generates a random token; copy it from the Environment tab and send it
+      # as "Authorization: Bearer <token>".
+      - key: LINQ_API_TOKEN
+        generateValue: true
