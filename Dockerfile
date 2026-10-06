@@ -32,8 +32,9 @@ RUN pip install --no-cache-dir -r requirements.txt \
 # Writable, ephemeral cache location on the HF free tier.
 ENV EXTRACTOR_CACHE_PATH=/tmp/linq_cache/extractor_cache.sqlite3
 
-# Auth is enforced by default; the Space must set LINQ_API_TOKEN (or
-# SUPABASE_JWT_SECRET) and GEMINI_API_KEY as Space secrets.
+# Auth is enforced by default. Set SUPABASE_URL for JWKS verification, or use
+# LINQ_API_TOKEN / legacy SUPABASE_JWT_SECRET. GEMINI_API_KEY remains a secret;
+# SUPABASE_URL is public configuration.
 ENV LINQ_REQUIRE_AUTH=1
 
 USER appuser

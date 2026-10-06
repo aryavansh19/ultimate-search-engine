@@ -16,6 +16,7 @@ dependencies = [
     "fastapi==0.115.6",
     "uvicorn==0.34.0",
     "yt-dlp>=2024.12.13",
+    "PyJWT[crypto]==2.15.1",
 ]
 
 [project.scripts]

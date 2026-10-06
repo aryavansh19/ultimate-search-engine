@@ -16,6 +16,10 @@ services:
       # Auth stays on: every /v1/analyze call spends Gemini quota.
       - key: LINQ_REQUIRE_AUTH
         value: "1"
+      # Public project URL used to discover Supabase's rotating ES256 signing keys.
+      # No JWT secret or service-role credential is needed by this service.
+      - key: SUPABASE_URL
+        value: https://btkfngukyxpqijlxrbhm.supabase.co
       # Free instances have an ephemeral disk; this is only a content cache.
       - key: EXTRACTOR_CACHE_PATH
         value: /tmp/linq_cache/extractor_cache.sqlite3

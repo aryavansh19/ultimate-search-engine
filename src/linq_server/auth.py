@@ -5,24 +5,19 @@ Two accepted credentials, checked in this order:
 1. **A Supabase access token.** LinQ already signs users in with Supabase, and the session
    is stored in an App Group so both the app and the share extension have it. That token is
    per-user, short-lived, and revocable by signing the user out — which is everything a
-   shared secret is not. Verified locally with HMAC-SHA256 against the project's JWT secret,
-   so there is no round trip to Supabase on every request.
+   shared secret is not. Asymmetric tokens are verified locally against Supabase's public
+   JWKS endpoint, including issuer, audience, role, expiry, and subject validation. Legacy
+   HS256 tokens remain supported when ``SUPABASE_JWT_SECRET`` is configured.
 2. **A shared token** (`LINQ_API_TOKEN`). For development, for curl, and as the fallback if
-   the JWT secret is not configured.
+   Supabase authentication is not configured.
 
 Why not ship the Gemini key and skip all this: an API key in an IPA is public. `strings` on
 the binary is enough. The failure mode is someone else spending the quota, and with Gemini
 that is a billing problem rather than an inconvenience.
 
-Why verify the JWT locally rather than calling `auth.getUser()`: that would add a network
-round trip to Google *plus* one to Supabase on every enrichment, and it would make this
-service unavailable whenever Supabase is. The signature is self-validating; only revocation
-needs the round trip, and a 1-hour token lifetime bounds that risk.
-
-HS256 is implemented on stdlib `hmac` on purpose — PyJWT is not currently installed, and
-pulling in a dependency for thirty lines of well-specified hashing is a poor trade. If you
-later switch the project to asymmetric (RS256/ES256) keys, replace this with PyJWT rather
-than hand-rolling the curve maths.
+The JWKS client caches signing keys, so verification does not put Supabase Auth in the hot
+path for every request. Key IDs are resolved through the discovery endpoint, allowing
+Supabase key rotation without shipping new app or server secrets.
 """
 
 from __future__ import annotations
@@ -37,12 +32,19 @@ import threading
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
+from typing import Any
+from urllib.parse import urlparse
+from uuid import UUID
 
 from fastapi import HTTPException, Request
+import jwt
+from jwt import PyJWKClient
+from jwt.exceptions import PyJWKClientError
 
 log = logging.getLogger("linq.auth")
 
 PUBLIC_PATHS = frozenset({"/health", "/", "/favicon.ico", "/docs", "/openapi.json", "/redoc"})
+ASYMMETRIC_ALGORITHMS = frozenset({"ES256", "RS256"})
 
 
 class AuthError(HTTPException):
@@ -118,6 +120,97 @@ def verify_supabase_jwt(token: str, secret: str, *, leeway: int = 30) -> str | N
     return str(subject) if subject else None
 
 
+class SupabaseTokenVerifier:
+    """Verify Supabase session JWTs without sending them back to Auth.
+
+    ``SUPABASE_URL`` enables asymmetric ES256/RS256 verification through the project's
+    public JWKS endpoint. ``SUPABASE_JWT_SECRET`` is only for legacy HS256 projects.
+    Algorithm families are deliberately handled in separate branches to prevent public
+    keys from ever being interpreted as HMAC secrets.
+    """
+
+    def __init__(
+        self,
+        *,
+        supabase_url: str | None = None,
+        jwt_secret: str | None = None,
+        audience: str = "authenticated",
+        leeway: int = 30,
+        jwks_client: Any | None = None,
+    ) -> None:
+        self.supabase_url = (supabase_url or "").strip().rstrip("/") or None
+        self.jwt_secret = (jwt_secret or "").strip() or None
+        self.audience = audience
+        self.leeway = leeway
+        self.issuer: str | None = None
+        self.jwks_url: str | None = None
+        self.jwks_client: Any | None = None
+
+        if self.supabase_url:
+            parsed = urlparse(self.supabase_url)
+            if parsed.scheme != "https" or not parsed.netloc:
+                raise ValueError("SUPABASE_URL must be an absolute HTTPS URL")
+            self.issuer = f"{self.supabase_url}/auth/v1"
+            self.jwks_url = f"{self.issuer}/.well-known/jwks.json"
+            self.jwks_client = jwks_client or PyJWKClient(self.jwks_url)
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.jwks_client or self.jwt_secret)
+
+    @property
+    def uses_jwks(self) -> bool:
+        return self.jwks_client is not None
+
+    def verify(self, token: str) -> str | None:
+        try:
+            header = jwt.get_unverified_header(token)
+            algorithm = header.get("alg")
+
+            if algorithm in ASYMMETRIC_ALGORITHMS and self.jwks_client and self.issuer:
+                signing_key = self.jwks_client.get_signing_key_from_jwt(token)
+                claims = jwt.decode(
+                    token,
+                    signing_key.key,
+                    algorithms=[algorithm],
+                    audience=self.audience,
+                    issuer=self.issuer,
+                    leeway=self.leeway,
+                    options={"require": ["aud", "exp", "iss", "role", "sub"]},
+                )
+            elif algorithm == "HS256" and self.jwt_secret:
+                if self.issuer:
+                    claims = jwt.decode(
+                        token,
+                        self.jwt_secret,
+                        algorithms=["HS256"],
+                        audience=self.audience,
+                        issuer=self.issuer,
+                        leeway=self.leeway,
+                        options={"require": ["aud", "exp", "iss", "role", "sub"]},
+                    )
+                else:
+                    # Preserve compatibility for legacy deployments which only set the
+                    # JWT secret and predate SUPABASE_URL configuration.
+                    return verify_supabase_jwt(token, self.jwt_secret, leeway=self.leeway)
+            else:
+                return None
+        except (jwt.PyJWTError, PyJWKClientError, ValueError, TypeError) as exc:
+            log.debug("Supabase JWT rejected: %s", exc)
+            return None
+
+        if claims.get("role") != "authenticated":
+            return None
+        subject = claims.get("sub")
+        if not isinstance(subject, str):
+            return None
+        try:
+            UUID(subject)
+        except ValueError:
+            return None
+        return subject
+
+
 class AccessPolicy:
     """Credential check plus a per-caller hourly cap on expensive calls."""
 
@@ -125,14 +218,19 @@ class AccessPolicy:
         self,
         *,
         shared_token: str | None = None,
+        supabase_url: str | None = None,
         supabase_jwt_secret: str | None = None,
         analyses_per_hour: int = 60,
         require_auth: bool = True,
     ) -> None:
         self.shared_token = shared_token or None
         self.supabase_jwt_secret = supabase_jwt_secret or None
+        self.supabase_url = supabase_url or None
         self.analyses_per_hour = analyses_per_hour
         self.require_auth = require_auth
+        self.supabase = SupabaseTokenVerifier(
+            supabase_url=self.supabase_url, jwt_secret=self.supabase_jwt_secret
+        )
         self._hits: dict[str, deque[float]] = defaultdict(deque)
         self._lock = threading.Lock()
 
@@ -140,10 +238,12 @@ class AccessPolicy:
     def from_env(cls) -> AccessPolicy:
         shared = (os.getenv("LINQ_API_TOKEN") or os.getenv("APP_ACCESS_TOKEN") or "").strip()
         secret = (os.getenv("SUPABASE_JWT_SECRET") or "").strip()
+        supabase_url = (os.getenv("SUPABASE_URL") or "").strip()
         require = (os.getenv("LINQ_REQUIRE_AUTH", "1").strip().lower()
                    in {"1", "true", "yes", "on"})
         return cls(
             shared_token=shared or None,
+            supabase_url=supabase_url or None,
             supabase_jwt_secret=secret or None,
             analyses_per_hour=_int("LINQ_ANALYSES_PER_HOUR", 60),
             require_auth=require,
@@ -151,12 +251,14 @@ class AccessPolicy:
 
     @property
     def configured(self) -> bool:
-        return bool(self.shared_token or self.supabase_jwt_secret)
+        return bool(self.shared_token or self.supabase.configured)
 
     def describe(self) -> dict[str, object]:
         return {
             "require_auth": self.require_auth,
-            "supabase_jwt": bool(self.supabase_jwt_secret),
+            "supabase_jwt": self.supabase.configured,
+            "supabase_jwks": self.supabase.uses_jwks,
+            "supabase_hs256": bool(self.supabase_jwt_secret),
             "shared_token": bool(self.shared_token),
             "analyses_per_hour": self.analyses_per_hour,
         }
@@ -174,8 +276,8 @@ class AccessPolicy:
             raise HTTPException(
                 status_code=503,
                 detail=(
-                    "Server has no credentials configured. Set SUPABASE_JWT_SECRET "
-                    "(preferred) or LINQ_API_TOKEN, or set LINQ_REQUIRE_AUTH=0 for "
+                    "Server has no credentials configured. Set SUPABASE_URL "
+                    "(preferred), SUPABASE_JWT_SECRET, or LINQ_API_TOKEN; or set LINQ_REQUIRE_AUTH=0 for "
                     "loopback-only development."
                 ),
             )
@@ -184,8 +286,8 @@ class AccessPolicy:
         if not token:
             raise AuthError("Missing credentials. Send 'Authorization: Bearer <token>'.")
 
-        if self.supabase_jwt_secret:
-            user_id = verify_supabase_jwt(token, self.supabase_jwt_secret)
+        if self.supabase.configured:
+            user_id = self.supabase.verify(token)
             if user_id:
                 return Caller(user_id=user_id, kind="supabase")
 
