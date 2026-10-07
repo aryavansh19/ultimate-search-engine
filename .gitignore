@@ -10,6 +10,8 @@ data/
 # Personal / sensitive data
 Instagram_data/
 saved_posts.json
+# Browser login cookies (yt-dlp cookies.txt) -- a full account login, never commit
+*cookies*.txt
 
 # Packaging / build artifacts
 *.egg-info/

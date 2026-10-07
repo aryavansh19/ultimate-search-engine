@@ -23,6 +23,7 @@ the service just has to not flatten it.
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
 
 from enrichment import Enricher, EnrichmentConfig
@@ -83,7 +84,15 @@ class AnalysisService:
     def capabilities(self) -> dict[str, object]:
         vector_ok, vector_reason = self.embedder.availability()
         model, dim = self.embedder.signature
+        cookie_file = self.extractor_config.cookie_file
         return {
+            "extraction": {
+                # Booleans only: lets you confirm the Instagram cookies secret file is
+                # mounted without exposing anything about it.
+                "cookie_file_configured": bool(cookie_file),
+                "cookie_file_found": bool(cookie_file) and os.path.isfile(cookie_file),
+                "managed_api": self.extractor_config.managed_api.enabled,
+            },
             "enrichment": {
                 "text_model": self.enrichment_config.text_model,
                 "media_model": self.enrichment_config.media_model,
@@ -101,10 +110,36 @@ class AnalysisService:
         }
 
     # ----------------------------------------------------------------------- analyze
-    def analyze(self, request: AnalyzeRequest) -> AnalyzeResponse:
+    def analyze(self, request: AnalyzeRequest, *, trace_id: str = "local") -> AnalyzeResponse:
         """Extract, enrich, chunk and embed one link. Blocking; call off the event loop."""
-        result = self.cascade.extract(request.url, client_payload=request.client_payload())
+        log.info(
+            "[search-pipeline:%s] 2. extraction started url=%s client_payload=%s",
+            trace_id,
+            request.url,
+            bool(request.client_payload()),
+        )
+        # retry_degraded: a link that failed extraction earlier (Instagram blocking an
+        # anonymous request, cookies not yet configured) must be tried again rather than
+        # served from cache as a permanent failure. Successful extractions still hit cache.
+        result = self.cascade.extract(
+            request.url,
+            client_payload=request.client_payload(),
+            retry_degraded=True,
+        )
         envelope = result.envelope
+        log.info(
+            "[search-pipeline:%s] 2. extraction complete tier=%s signal=%s "
+            "media_kind=%s degraded=%s words=%s transcript=%s media_url=%s title=%r",
+            trace_id,
+            envelope.tier.value,
+            envelope.signal.value,
+            envelope.media_kind.value,
+            envelope.degraded,
+            envelope.prose_word_count,
+            bool(envelope.transcript),
+            bool(envelope.media_url),
+            envelope.title,
+        )
 
         mode = EnrichmentMode.MEDIA if request.force_media else None
 
@@ -125,6 +160,11 @@ class AnalysisService:
                 log.info("force_media requested but no media available for %s; using text",
                          request.url)
             mode = EnrichmentMode.METADATA
+        log.info(
+            "[search-pipeline:%s] 3. enrichment started selected_mode=%s",
+            trace_id,
+            mode.value if mode else "automatic",
+        )
 
         try:
             enrichment = self.enricher.enrich(
@@ -133,14 +173,40 @@ class AnalysisService:
         except Exception as exc:  # noqa: BLE001
             # A failed enrichment must not lose the extraction. The client still gets the
             # title and whatever text was captured, and can retry the expensive part later.
-            log.warning("enrichment failed for %s: %s", request.url, exc)
+            log.exception(
+                "[search-pipeline:%s] ERROR enrichment failed url=%s: %s",
+                trace_id,
+                request.url,
+                exc,
+            )
             raise ServiceError(f"enrichment failed: {type(exc).__name__}: {exc}") from exc
+        log.info(
+            "[search-pipeline:%s] 4. enrichment complete provider=%s model=%s mode=%s "
+            "details=%s tags=%s input_tokens=%s output_tokens=%s cost_usd=%.6f "
+            "duration_ms=%s degraded=%s",
+            trace_id,
+            enrichment.provider,
+            enrichment.model,
+            enrichment.mode.value,
+            len(enrichment.details),
+            len(enrichment.tags),
+            enrichment.input_tokens,
+            enrichment.output_tokens,
+            enrichment.cost_usd,
+            enrichment.duration_ms,
+            enrichment.degraded,
+        )
 
         embedding = None
         if request.embed:
-            embedding = self._embed_document(envelope, enrichment)
+            embedding = self._embed_document(envelope, enrichment, trace_id=trace_id)
+        else:
+            log.info(
+                "[search-pipeline:%s] 5. server embedding skipped; Apple embedding is local",
+                trace_id,
+            )
 
-        return AnalyzeResponse(
+        response = AnalyzeResponse(
             url=envelope.canonical_url,
             url_hash=envelope.url_hash,
             title=envelope.title,
@@ -187,14 +253,22 @@ class AnalysisService:
                 else None
             ),
         )
+        log.info(
+            "[search-pipeline:%s] 5. response assembled summary_chars=%s description_chars=%s",
+            trace_id,
+            len(response.summary),
+            len(response.description),
+        )
+        return response
 
     def _embed_document(
-        self, envelope: ContentEnvelope, enrichment: Enrichment
+        self, envelope: ContentEnvelope, enrichment: Enrichment, *, trace_id: str = "local"
     ) -> EmbedResult | None:
         chunks = chunk_document(envelope, enrichment)
         texts = [chunk.text for chunk in chunks if chunk.text.strip()]
         kinds = [chunk.kind for chunk in chunks if chunk.text.strip()]
         if not texts:
+            log.info("[search-pipeline:%s] no embedding chunks produced", trace_id)
             return None
         try:
             matrix = self.embedder.embed_documents(texts)
@@ -207,6 +281,13 @@ class AnalysisService:
             log.warning("embedding failed: %s", exc)
             return None
         model, dim = self.embedder.signature
+        log.info(
+            "[search-pipeline:%s] server embeddings complete model=%s dimension=%s vectors=%s",
+            trace_id,
+            model,
+            dim,
+            len(matrix),
+        )
         return EmbedResult(
             model=model,
             dim=dim,

@@ -33,12 +33,12 @@ def main() -> None:
         pass
 
     if args.host != "127.0.0.1" and not (
-        os.getenv("SUPABASE_JWT_SECRET") or os.getenv("LINQ_API_TOKEN")
+        os.getenv("SUPABASE_URL") or os.getenv("SUPABASE_JWT_SECRET") or os.getenv("LINQ_API_TOKEN")
         or os.getenv("APP_ACCESS_TOKEN")
     ):
         raise SystemExit(
             f"Refusing to bind {args.host} with no credentials configured.\n"
-            "Set SUPABASE_JWT_SECRET (preferred) or LINQ_API_TOKEN first."
+            "Set SUPABASE_URL (preferred), SUPABASE_JWT_SECRET, or LINQ_API_TOKEN first."
         )
 
     import uvicorn

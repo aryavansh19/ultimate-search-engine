@@ -65,6 +65,24 @@ A personal link-memory and semantic search engine that extracts, enriches, index
   python -m search "your query here"
   ```
 
+### LinQ mobile enrichment API
+
+Run `python -m linq_server` for the authenticated enrichment API. In production set
+`SUPABASE_URL=https://<project-ref>.supabase.co`; signed-in user JWTs are verified locally
+against Supabase's public JWKS endpoint. Issuer, `authenticated` audience/role, expiry, and
+UUID subject are all required. Signing-key rotation is picked up through `kid` discovery.
+
+`LINQ_API_TOKEN` remains available for server-side curl and development use. Never bundle
+that shared token, a Supabase secret key, or `GEMINI_API_KEY` in a mobile application. Legacy
+HS256 projects can set `SUPABASE_JWT_SECRET`, though asymmetric signing keys are preferred.
+The `/health` response reports which authentication paths are configured without exposing
+credentials.
+
+Set `LINQ_LOG_PAYLOADS=1` to print sanitized request JSON, extraction/enrichment stage
+summaries, and the complete response JSON with a shared trace ID. Authorization headers,
+API keys, cookies, and rendered HTML are never logged. Response payloads contain bookmark
+content, so disable this setting when detailed diagnostics are no longer needed.
+
 ## 📁 Project Structure
 
 ```
