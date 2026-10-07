@@ -78,6 +78,11 @@ HS256 projects can set `SUPABASE_JWT_SECRET`, though asymmetric signing keys are
 The `/health` response reports which authentication paths are configured without exposing
 credentials.
 
+Set `LINQ_LOG_PAYLOADS=1` to print sanitized request JSON, extraction/enrichment stage
+summaries, and the complete response JSON with a shared trace ID. Authorization headers,
+API keys, cookies, and rendered HTML are never logged. Response payloads contain bookmark
+content, so disable this setting when detailed diagnostics are no longer needed.
+
 ## 📁 Project Structure
 
 ```

@@ -20,8 +20,10 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 from typing import Any
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
@@ -29,6 +31,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .auth import AccessPolicy
+from .diagnostics import analyze_request_payload, log_json, payload_logging_enabled
 from .models import AnalyzeRequest, AnalyzeResponse, EmbedRequest, EmbedResponse
 from .service import AnalysisService, ServiceError
 
@@ -71,6 +74,37 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def trace_requests(request: Request, call_next):
+    """Give every API call one ID shared by all Render log lines."""
+    trace_id = uuid4().hex[:12]
+    request.state.trace_id = trace_id
+    started = time.perf_counter()
+    is_api = request.url.path.startswith("/v1/")
+    if is_api:
+        log.info(
+            "[search-pipeline:%s] request started method=%s path=%s",
+            trace_id,
+            request.method,
+            request.url.path,
+        )
+    try:
+        response = await call_next(request)
+    except Exception:  # noqa: BLE001
+        log.exception("[search-pipeline:%s] unhandled request failure", trace_id)
+        raise
+    elapsed_ms = round((time.perf_counter() - started) * 1000)
+    response.headers["X-LinQ-Trace-ID"] = trace_id
+    if is_api:
+        log.info(
+            "[search-pipeline:%s] request finished status=%s duration_ms=%s",
+            trace_id,
+            response.status_code,
+            elapsed_ms,
+        )
+    return response
+
+
 def _service() -> AnalysisService:
     if service is None:  # pragma: no cover - only during startup/shutdown
         raise HTTPException(status_code=503, detail="service not ready")
@@ -87,7 +121,11 @@ async def _service_error(request: Request, exc: ServiceError) -> JSONResponse:
 @app.get("/health")
 def health() -> dict[str, Any]:
     """Liveness probe. Carries configuration, never user data."""
-    payload: dict[str, Any] = {"ok": True, "auth": policy.describe()}
+    payload: dict[str, Any] = {
+        "ok": True,
+        "auth": policy.describe(),
+        "diagnostics": {"payload_logging": payload_logging_enabled()},
+    }
     if service is not None:
         payload["capabilities"] = service.capabilities()
     return payload
@@ -100,11 +138,46 @@ async def analyze(request: AnalyzeRequest, http: Request) -> AnalyzeResponse:
     This is the expensive one — a video pass costs real money and can take a minute — so it
     is both authenticated and rate limited per caller.
     """
+    trace_id = getattr(http.state, "trace_id", "unknown")
     caller = policy.identify(http)
     policy.charge(caller)
     svc = _service()
-    log.info("analyze url=%s force_media=%s caller=%s", request.url, request.force_media, caller.kind)
-    return await run_in_threadpool(svc.analyze, request)
+    log.info(
+        "[search-pipeline:%s] authenticated caller=%s user_id=%s url=%s "
+        "force_media=%s embed=%s",
+        trace_id,
+        caller.kind,
+        caller.user_id or "shared-token",
+        request.url,
+        request.force_media,
+        request.embed,
+    )
+    log_json(
+        log,
+        trace_id,
+        "1. request JSON (authorization and HTML excluded)",
+        analyze_request_payload(request),
+    )
+    try:
+        result = await run_in_threadpool(lambda: svc.analyze(request, trace_id=trace_id))
+    except Exception:  # noqa: BLE001
+        log.exception("[search-pipeline:%s] analyze failed url=%s", trace_id, request.url)
+        raise
+    log_json(
+        log,
+        trace_id,
+        "6. response JSON returned to LinQ",
+        result.model_dump(mode="json"),
+    )
+    log.info(
+        "[search-pipeline:%s] response ready degraded=%s details=%s tags=%s entities=%s",
+        trace_id,
+        result.degraded,
+        len(result.details),
+        len(result.tags),
+        sum(len(values) for values in result.entities.model_dump().values()),
+    )
+    return result
 
 
 @app.post("/v1/embed", response_model=EmbedResponse)
@@ -114,10 +187,26 @@ async def embed(request: EmbedRequest, http: Request) -> EmbedResponse:
     Not charged against the analysis budget: this is cheap, free on the current model, and
     rate limiting the search path would make the app feel broken.
     """
-    policy.identify(http)
+    trace_id = getattr(http.state, "trace_id", "unknown")
+    caller = policy.identify(http)
     svc = _service()
+    log.info(
+        "[search-pipeline:%s] embed request caller=%s kind=%s texts=%s",
+        trace_id,
+        caller.kind,
+        request.kind,
+        len(request.texts),
+    )
     result, cached = await run_in_threadpool(
         lambda: svc.embed(request.texts, kind=request.kind)
+    )
+    log.info(
+        "[search-pipeline:%s] embed complete model=%s dimension=%s vectors=%s cached=%s",
+        trace_id,
+        result.model,
+        result.dim,
+        len(result.vectors),
+        cached,
     )
     return EmbedResponse(
         model=result.model, dim=result.dim, vectors=result.vectors, cached=cached

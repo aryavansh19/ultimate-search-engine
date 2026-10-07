@@ -20,6 +20,10 @@ services:
       # No JWT secret or service-role credential is needed by this service.
       - key: SUPABASE_URL
         value: https://btkfngukyxpqijlxrbhm.supabase.co
+      # Pretty-print sanitized request and complete response JSON in Render logs.
+      # Authorization headers, API keys, cookies, and rendered HTML are never included.
+      - key: LINQ_LOG_PAYLOADS
+        value: "1"
       # Free instances have an ephemeral disk; this is only a content cache.
       - key: EXTRACTOR_CACHE_PATH
         value: /tmp/linq_cache/extractor_cache.sqlite3
