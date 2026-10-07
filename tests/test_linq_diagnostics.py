@@ -5,7 +5,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from linq_server.diagnostics import analyze_request_payload, log_json
+from linq_server.diagnostics import analyze_request_payload, configure_logging, log_json
 from linq_server.models import AnalyzeRequest
 
 
@@ -37,6 +37,25 @@ class DiagnosticsTests(unittest.TestCase):
         output = "\n".join(captured.output)
         self.assertIn("[search-pipeline:abc123] response", output)
         self.assertIn('"ok": true', output)
+
+    def test_configure_logging_reuses_uvicorn_handlers(self) -> None:
+        uvicorn_logger = logging.getLogger("uvicorn.error")
+        linq_logger = logging.getLogger("linq")
+        old_uvicorn_handlers = list(uvicorn_logger.handlers)
+        old_linq_handlers = list(linq_logger.handlers)
+        old_propagate = linq_logger.propagate
+        handler = logging.NullHandler()
+        try:
+            uvicorn_logger.handlers = [handler]
+            with patch.dict(os.environ, {"LINQ_LOG_LEVEL": "INFO"}, clear=True):
+                configured_level = configure_logging()
+            self.assertEqual(configured_level, logging.INFO)
+            self.assertEqual(linq_logger.handlers, [handler])
+            self.assertFalse(linq_logger.propagate)
+        finally:
+            uvicorn_logger.handlers = old_uvicorn_handlers
+            linq_logger.handlers = old_linq_handlers
+            linq_logger.propagate = old_propagate
 
 
 if __name__ == "__main__":

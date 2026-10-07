@@ -31,7 +31,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .auth import AccessPolicy
-from .diagnostics import analyze_request_payload, log_json, payload_logging_enabled
+from .diagnostics import (
+    analyze_request_payload,
+    configure_logging,
+    log_json,
+    payload_logging_enabled,
+)
 from .models import AnalyzeRequest, AnalyzeResponse, EmbedRequest, EmbedResponse
 from .service import AnalysisService, ServiceError
 
@@ -44,6 +49,7 @@ policy = AccessPolicy.from_env()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global service
+    configure_logging()
     service = AnalysisService()
     caps = service.capabilities()
     log.info("linq service ready: %s", caps)
@@ -124,7 +130,10 @@ def health() -> dict[str, Any]:
     payload: dict[str, Any] = {
         "ok": True,
         "auth": policy.describe(),
-        "diagnostics": {"payload_logging": payload_logging_enabled()},
+        "diagnostics": {
+            "payload_logging": payload_logging_enabled(),
+            "logger_level": logging.getLevelName(logging.getLogger("linq").level),
+        },
     }
     if service is not None:
         payload["capabilities"] = service.capabilities()
