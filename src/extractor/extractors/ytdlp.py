@@ -47,6 +47,18 @@ _SUBTITLE_LANG_PREFERENCE = ("en", "en-US", "en-GB", "en-orig", "en-auto")
 _SUBTITLE_EXT_PREFERENCE = ("json3", "vtt", "srv1", "ttml")
 _VTT_TIMESTAMP = re.compile(r"^\d{2}:\d{2}:\d{2}[.,]\d{3}\s*-->")
 _VTT_TAG = re.compile(r"<[^>]+>")
+_QUERY_VALUE = re.compile(r"([?&][^=\s&]+)=([^&\s]+)")
+
+
+def _safe_log_message(message: str) -> str:
+    """Keep extractor failures useful without leaking signed query parameters.
+
+    yt-dlp can include direct CDN URLs in an error. Those URLs often carry temporary
+    signatures, so retain the host/path while redacting every query value. Collapsing the
+    message to one bounded line also prevents a remote response from flooding Render logs.
+    """
+    text = " ".join(str(message).split())
+    return _QUERY_VALUE.sub(r"\1=<redacted>", text)[:500]
 
 
 class _SilentLogger:
@@ -59,10 +71,10 @@ class _SilentLogger:
         log.debug("yt-dlp: %s", message)
 
     def warning(self, message: str) -> None:
-        log.debug("yt-dlp warning: %s", message)
+        log.warning("yt-dlp warning: %s", _safe_log_message(message))
 
     def error(self, message: str) -> None:
-        log.debug("yt-dlp error: %s", message)
+        log.warning("yt-dlp error: %s", _safe_log_message(message))
 
 
 class YtDlpExtractor(Extractor):

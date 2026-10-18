@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from dataclasses import dataclass
 
 from enrichment import Enricher, EnrichmentConfig
@@ -43,6 +44,15 @@ from .models import (
 )
 
 log = logging.getLogger("linq.service")
+_QUERY_VALUE = re.compile(r"([?&][^=\s&]+)=([^&\s]+)")
+
+
+def _safe_attempt_reason(reason: str | None) -> str:
+    """Bound a tier failure and redact values from any signed URL it contains."""
+    if not reason:
+        return "none"
+    text = " ".join(str(reason).split())
+    return _QUERY_VALUE.sub(r"\1=<redacted>", text)[:500]
 
 
 class ServiceError(RuntimeError):
@@ -126,6 +136,18 @@ class AnalysisService:
             client_payload=request.client_payload(),
             retry_degraded=True,
         )
+        for attempt in result.attempts:
+            log_method = log.info if attempt.ok or attempt.skipped else log.warning
+            log_method(
+                "[search-pipeline:%s] extractor attempt tier=%s ok=%s skipped=%s "
+                "duration_ms=%s reason=%s",
+                trace_id,
+                attempt.tier.value,
+                attempt.ok,
+                attempt.skipped,
+                attempt.duration_ms,
+                _safe_attempt_reason(attempt.reason),
+            )
         envelope = result.envelope
         log.info(
             "[search-pipeline:%s] 2. extraction complete tier=%s signal=%s "

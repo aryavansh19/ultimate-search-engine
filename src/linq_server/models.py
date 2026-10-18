@@ -52,11 +52,16 @@ class AnalyzeRequest(BaseModel):
     def has_substantial_content(self) -> bool:
         """Whether the client actually captured content, as opposed to just a label.
 
-        A title and a hostname are not content. This distinction decides whether the
-        client-payload tier is allowed to win the extraction cascade — see
+        A title and a hostname are not content. A real page description is content: on
+        session-gated sites such as Instagram it is often the only useful text the signed-in
+        iPhone can hand to a server running from a datacenter. This distinction decides
+        whether the client-payload tier is allowed to win the extraction cascade — see
         ``client_payload``.
         """
-        return bool(self.html or self.caption or self.media_url)
+        return any(
+            isinstance(value, str) and bool(value.strip())
+            for value in (self.html, self.caption, self.description, self.media_url)
+        )
 
     def client_payload(self) -> dict[str, Any]:
         """Flat payload for `ClientPayloadExtractor`, which aliases these key names.
@@ -64,7 +69,7 @@ class AnalyzeRequest(BaseModel):
         **Returns empty unless the client captured real content**, and that is the whole
         point of this method.
 
-        The cascade stops at the first tier whose envelope has any text signal at all
+        The cascade normally stops at the first tier whose envelope has any text signal
         (`signal is not NONE`, which is five prose words). A payload of just
         `{"title": "How I trained for a marathon", "author": "youtube.com"}` clears that bar
         — so passing it made the client-payload tier win instantly, yt-dlp never ran, no
@@ -75,16 +80,25 @@ class AnalyzeRequest(BaseModel):
 
         So thin metadata is withheld deliberately. The server's own tiers recover the title
         anyway, and `merged_with` fills any gaps a later tier leaves. When the app does
-        capture something real — rendered DOM from a session-bearing webview, a caption, a
-        direct media URL — this tier wins on merit and skips the server-side fetch entirely,
-        which is the case it was built for.
+        capture something real — rendered DOM from a session-bearing webview, a caption or
+        page description, a direct media URL — it becomes a trusted fallback. Weak video
+        metadata is retained while the cascade continues to yt-dlp for richer media;
+        stronger client content can still finish the cascade immediately.
         """
         if not self.has_substantial_content():
             return {}
 
+        caption = next(
+            (
+                value.strip()
+                for value in (self.caption, self.description)
+                if isinstance(value, str) and value.strip()
+            ),
+            None,
+        )
         payload: dict[str, Any] = {
             "title": self.title,
-            "caption": self.caption or self.description,
+            "caption": caption,
             "author": self.author,
             "thumbnail_url": self.thumbnail_url,
             "media_url": self.media_url,

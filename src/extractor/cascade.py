@@ -150,12 +150,28 @@ class ExtractionCascade:
                 )
                 continue
 
-            partial = envelope.signal is SignalStrength.NONE
+            # A client-provided caption is a valuable fallback, but for video it is
+            # still only metadata: nobody has inspected the audio or frames yet.
+            # Keep it in ``best`` while allowing yt-dlp (and later tiers) to find a
+            # transcript or playable media.  If they fail, the client caption still
+            # wins and the save remains searchable instead of becoming degraded.
+            client_video_fallback = (
+                extractor.tier is ExtractionTier.CLIENT_PAYLOAD
+                and envelope.signal is SignalStrength.WEAK
+                and envelope.needs_media_understanding
+            )
+            partial = envelope.signal is SignalStrength.NONE or client_video_fallback
+            if client_video_fallback:
+                attempt_reason = "partial: client metadata; trying richer video extraction"
+            elif partial:
+                attempt_reason = "partial: media only, no text"
+            else:
+                attempt_reason = None
             attempts.append(
                 ExtractionAttempt(
                     tier=extractor.tier,
                     ok=True,
-                    reason="partial: media only, no text" if partial else None,
+                    reason=attempt_reason,
                     duration_ms=duration_ms,
                 )
             )
