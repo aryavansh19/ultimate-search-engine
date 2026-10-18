@@ -16,10 +16,11 @@ services:
       # Auth stays on: every /v1/analyze call spends Gemini quota.
       - key: LINQ_REQUIRE_AUTH
         value: "1"
-      # Public project URL used to discover Supabase's rotating ES256 signing keys.
+      # Allowlisted Testing + Production project URLs. The server uses the JWT issuer
+      # only to select one of these public JWKS endpoints, then fully verifies the token.
       # No JWT secret or service-role credential is needed by this service.
-      - key: SUPABASE_URL
-        value: https://btkfngukyxpqijlxrbhm.supabase.co
+      - key: SUPABASE_URLS
+        value: "https://btkfngukyxpqijlxrbhm.supabase.co,https://etugntohjegqbfxmcfzy.supabase.co"
       # Pretty-print sanitized request and complete response JSON in Render logs.
       # Authorization headers, API keys, cookies, and rendered HTML are never included.
       - key: LINQ_LOG_PAYLOADS

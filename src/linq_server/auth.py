@@ -31,6 +31,7 @@ import os
 import threading
 import time
 from collections import defaultdict, deque
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlparse
@@ -58,12 +59,24 @@ class Caller:
 
     user_id: str | None
     kind: str  # "supabase" | "shared"
+    issuer: str | None = None
 
     @property
     def rate_key(self) -> str:
         # Per-user when we know the user, so one heavy user cannot exhaust everyone's
         # budget, and the limit follows the account rather than a shared NAT address.
-        return f"user:{self.user_id}" if self.user_id else "shared"
+        if not self.user_id:
+            return "shared"
+        # Supabase user UUIDs are unique inside one project, not across projects. Keep
+        # staging and production budgets isolated even if they happen to contain the
+        # same UUID.
+        return f"user:{self.issuer or 'legacy'}:{self.user_id}"
+
+
+@dataclass(frozen=True)
+class VerifiedSupabaseIdentity:
+    user_id: str
+    issuer: str | None
 
 
 def _b64url(segment: str) -> bytes:
@@ -123,8 +136,11 @@ def verify_supabase_jwt(token: str, secret: str, *, leeway: int = 30) -> str | N
 class SupabaseTokenVerifier:
     """Verify Supabase session JWTs without sending them back to Auth.
 
-    ``SUPABASE_URL`` enables asymmetric ES256/RS256 verification through the project's
-    public JWKS endpoint. ``SUPABASE_JWT_SECRET`` is only for legacy HS256 projects.
+    ``SUPABASE_URL`` or ``SUPABASE_URLS`` enables asymmetric ES256/RS256 verification
+    through each project's public JWKS endpoint. The unverified JWT issuer is used only
+    to select an exact match from this configured allowlist; all claims and the signature
+    are then verified against that project's key. ``SUPABASE_JWT_SECRET`` is only for a
+    single legacy HS256 project.
     Algorithm families are deliberately handled in separate branches to prevent public
     keys from ever being interpreted as HMAC secrets.
     """
@@ -133,51 +149,111 @@ class SupabaseTokenVerifier:
         self,
         *,
         supabase_url: str | None = None,
+        supabase_urls: Iterable[str] | None = None,
         jwt_secret: str | None = None,
         audience: str = "authenticated",
         leeway: int = 30,
         jwks_client: Any | None = None,
+        jwks_clients: Mapping[str, Any] | None = None,
     ) -> None:
-        self.supabase_url = (supabase_url or "").strip().rstrip("/") or None
         self.jwt_secret = (jwt_secret or "").strip() or None
         self.audience = audience
         self.leeway = leeway
-        self.issuer: str | None = None
-        self.jwks_url: str | None = None
-        self.jwks_client: Any | None = None
 
-        if self.supabase_url:
-            parsed = urlparse(self.supabase_url)
+        supplied_urls: list[str] = []
+        if supabase_url:
+            supplied_urls.append(supabase_url)
+        if isinstance(supabase_urls, str):
+            supplied_urls.extend(supabase_urls.split(","))
+        elif supabase_urls:
+            supplied_urls.extend(supabase_urls)
+
+        normalized_urls: list[str] = []
+        for candidate in supplied_urls:
+            normalized = candidate.strip().rstrip("/")
+            if not normalized or normalized in normalized_urls:
+                continue
+            parsed = urlparse(normalized)
             if parsed.scheme != "https" or not parsed.netloc:
-                raise ValueError("SUPABASE_URL must be an absolute HTTPS URL")
-            self.issuer = f"{self.supabase_url}/auth/v1"
-            self.jwks_url = f"{self.issuer}/.well-known/jwks.json"
-            self.jwks_client = jwks_client or PyJWKClient(self.jwks_url)
+                raise ValueError("Every Supabase URL must be an absolute HTTPS URL")
+            normalized_urls.append(normalized)
+
+        if self.jwt_secret and len(normalized_urls) > 1:
+            raise ValueError(
+                "SUPABASE_JWT_SECRET cannot be shared across multiple Supabase projects; "
+                "use their public JWKS keys instead"
+            )
+        if jwks_client and len(normalized_urls) > 1:
+            raise ValueError("jwks_client is only valid for one Supabase URL")
+
+        self.supabase_urls = tuple(normalized_urls)
+        self.supabase_url = self.supabase_urls[0] if len(self.supabase_urls) == 1 else None
+        self.issuers = tuple(f"{url}/auth/v1" for url in self.supabase_urls)
+        self.issuer = self.issuers[0] if len(self.issuers) == 1 else None
+        self.jwks_url = (
+            f"{self.issuer}/.well-known/jwks.json" if self.issuer else None
+        )
+        supplied_clients = dict(jwks_clients or {})
+        self._jwks_clients: dict[str, Any] = {}
+        for url, issuer in zip(self.supabase_urls, self.issuers, strict=True):
+            client = supplied_clients.get(issuer) or supplied_clients.get(url)
+            if client is None and jwks_client is not None:
+                client = jwks_client
+            self._jwks_clients[issuer] = client or PyJWKClient(
+                f"{issuer}/.well-known/jwks.json"
+            )
+
+        # Retain the singular attribute for callers that only need a yes/no answer.
+        self.jwks_client = (
+            next(iter(self._jwks_clients.values())) if len(self._jwks_clients) == 1 else None
+        )
 
     @property
     def configured(self) -> bool:
-        return bool(self.jwks_client or self.jwt_secret)
+        return bool(self._jwks_clients or self.jwt_secret)
 
     @property
     def uses_jwks(self) -> bool:
-        return self.jwks_client is not None
+        return bool(self._jwks_clients)
+
+    @property
+    def issuer_count(self) -> int:
+        return len(self._jwks_clients)
 
     def verify(self, token: str) -> str | None:
+        identity = self.verify_identity(token)
+        return identity.user_id if identity else None
+
+    def verify_identity(self, token: str) -> VerifiedSupabaseIdentity | None:
         try:
             header = jwt.get_unverified_header(token)
             algorithm = header.get("alg")
 
-            if algorithm in ASYMMETRIC_ALGORITHMS and self.jwks_client and self.issuer:
-                signing_key = self.jwks_client.get_signing_key_from_jwt(token)
+            verified_issuer: str | None = None
+            if algorithm in ASYMMETRIC_ALGORITHMS and self._jwks_clients:
+                unverified_claims = jwt.decode(
+                    token,
+                    options={"verify_signature": False},
+                )
+                candidate_issuer = unverified_claims.get("iss")
+                if not isinstance(candidate_issuer, str):
+                    return None
+                selected_client = self._jwks_clients.get(candidate_issuer)
+                if selected_client is None:
+                    # The token controls this string, so it can only select an exact
+                    # preconfigured issuer. Never discover keys from an arbitrary URL.
+                    return None
+                signing_key = selected_client.get_signing_key_from_jwt(token)
                 claims = jwt.decode(
                     token,
                     signing_key.key,
                     algorithms=[algorithm],
                     audience=self.audience,
-                    issuer=self.issuer,
+                    issuer=candidate_issuer,
                     leeway=self.leeway,
                     options={"require": ["aud", "exp", "iss", "role", "sub"]},
                 )
+                verified_issuer = candidate_issuer
             elif algorithm == "HS256" and self.jwt_secret:
                 if self.issuer:
                     claims = jwt.decode(
@@ -189,10 +265,16 @@ class SupabaseTokenVerifier:
                         leeway=self.leeway,
                         options={"require": ["aud", "exp", "iss", "role", "sub"]},
                     )
+                    verified_issuer = self.issuer
                 else:
                     # Preserve compatibility for legacy deployments which only set the
                     # JWT secret and predate SUPABASE_URL configuration.
-                    return verify_supabase_jwt(token, self.jwt_secret, leeway=self.leeway)
+                    subject = verify_supabase_jwt(
+                        token, self.jwt_secret, leeway=self.leeway
+                    )
+                    return (
+                        VerifiedSupabaseIdentity(subject, None) if subject else None
+                    )
             else:
                 return None
         except (jwt.PyJWTError, PyJWKClientError, ValueError, TypeError) as exc:
@@ -208,7 +290,7 @@ class SupabaseTokenVerifier:
             UUID(subject)
         except ValueError:
             return None
-        return subject
+        return VerifiedSupabaseIdentity(subject, verified_issuer)
 
 
 class AccessPolicy:
@@ -219,6 +301,7 @@ class AccessPolicy:
         *,
         shared_token: str | None = None,
         supabase_url: str | None = None,
+        supabase_urls: Iterable[str] | None = None,
         supabase_jwt_secret: str | None = None,
         analyses_per_hour: int = 60,
         require_auth: bool = True,
@@ -229,7 +312,9 @@ class AccessPolicy:
         self.analyses_per_hour = analyses_per_hour
         self.require_auth = require_auth
         self.supabase = SupabaseTokenVerifier(
-            supabase_url=self.supabase_url, jwt_secret=self.supabase_jwt_secret
+            supabase_url=self.supabase_url,
+            supabase_urls=supabase_urls,
+            jwt_secret=self.supabase_jwt_secret,
         )
         self._hits: dict[str, deque[float]] = defaultdict(deque)
         self._lock = threading.Lock()
@@ -239,11 +324,17 @@ class AccessPolicy:
         shared = (os.getenv("LINQ_API_TOKEN") or os.getenv("APP_ACCESS_TOKEN") or "").strip()
         secret = (os.getenv("SUPABASE_JWT_SECRET") or "").strip()
         supabase_url = (os.getenv("SUPABASE_URL") or "").strip()
+        supabase_urls = [
+            url.strip()
+            for url in (os.getenv("SUPABASE_URLS") or "").split(",")
+            if url.strip()
+        ]
         require = (os.getenv("LINQ_REQUIRE_AUTH", "1").strip().lower()
                    in {"1", "true", "yes", "on"})
         return cls(
             shared_token=shared or None,
             supabase_url=supabase_url or None,
+            supabase_urls=supabase_urls,
             supabase_jwt_secret=secret or None,
             analyses_per_hour=_int("LINQ_ANALYSES_PER_HOUR", 60),
             require_auth=require,
@@ -258,6 +349,7 @@ class AccessPolicy:
             "require_auth": self.require_auth,
             "supabase_jwt": self.supabase.configured,
             "supabase_jwks": self.supabase.uses_jwks,
+            "supabase_issuers": self.supabase.issuer_count,
             "supabase_hs256": bool(self.supabase_jwt_secret),
             "shared_token": bool(self.shared_token),
             "analyses_per_hour": self.analyses_per_hour,
@@ -276,7 +368,7 @@ class AccessPolicy:
             raise HTTPException(
                 status_code=503,
                 detail=(
-                    "Server has no credentials configured. Set SUPABASE_URL "
+                    "Server has no credentials configured. Set SUPABASE_URLS or SUPABASE_URL "
                     "(preferred), SUPABASE_JWT_SECRET, or LINQ_API_TOKEN; or set LINQ_REQUIRE_AUTH=0 for "
                     "loopback-only development."
                 ),
@@ -287,9 +379,13 @@ class AccessPolicy:
             raise AuthError("Missing credentials. Send 'Authorization: Bearer <token>'.")
 
         if self.supabase.configured:
-            user_id = self.supabase.verify(token)
-            if user_id:
-                return Caller(user_id=user_id, kind="supabase")
+            identity = self.supabase.verify_identity(token)
+            if identity:
+                return Caller(
+                    user_id=identity.user_id,
+                    kind="supabase",
+                    issuer=identity.issuer,
+                )
 
         if self.shared_token and hmac.compare_digest(token, self.shared_token):
             return Caller(user_id=None, kind="shared")

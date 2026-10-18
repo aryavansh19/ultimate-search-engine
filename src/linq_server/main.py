@@ -55,7 +55,8 @@ async def lifespan(app: FastAPI):
     log.info("linq service ready: %s", caps)
     if not policy.configured and policy.require_auth:
         log.error(
-            "No credentials configured. Set SUPABASE_URL, SUPABASE_JWT_SECRET, "
+            "No credentials configured. Set SUPABASE_URLS or SUPABASE_URL, "
+            "SUPABASE_JWT_SECRET, "
             "or LINQ_API_TOKEN; or set LINQ_REQUIRE_AUTH=0 for loopback development."
         )
     try:

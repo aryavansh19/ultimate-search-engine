@@ -67,16 +67,20 @@ A personal link-memory and semantic search engine that extracts, enriches, index
 
 ### LinQ mobile enrichment API
 
-Run `python -m linq_server` for the authenticated enrichment API. In production set
-`SUPABASE_URL=https://<project-ref>.supabase.co`; signed-in user JWTs are verified locally
-against Supabase's public JWKS endpoint. Issuer, `authenticated` audience/role, expiry, and
-UUID subject are all required. Signing-key rotation is picked up through `kid` discovery.
+Run `python -m linq_server` for the authenticated enrichment API. For one Supabase project,
+set `SUPABASE_URL=https://<project-ref>.supabase.co`. To let one service accept isolated
+Testing and Production users, set a comma-separated allowlist such as
+`SUPABASE_URLS=https://<testing-ref>.supabase.co,https://<production-ref>.supabase.co`.
+Signed-in user JWTs are verified locally against the selected project's public JWKS
+endpoint. The unverified issuer can only select an exact configured URL; the signature,
+issuer, `authenticated` audience/role, expiry, and UUID subject are then fully verified.
+Signing-key rotation is picked up through `kid` discovery.
 
 `LINQ_API_TOKEN` remains available for server-side curl and development use. Never bundle
 that shared token, a Supabase secret key, or `GEMINI_API_KEY` in a mobile application. Legacy
 HS256 projects can set `SUPABASE_JWT_SECRET`, though asymmetric signing keys are preferred.
-The `/health` response reports which authentication paths are configured without exposing
-credentials.
+A single legacy secret cannot be used with multiple projects. The `/health` response
+reports the number of allowlisted issuers without exposing credentials or project URLs.
 
 Set `LINQ_LOG_PAYLOADS=1` to print sanitized request JSON, extraction/enrichment stage
 summaries, and the complete response JSON with a shared trace ID. Authorization headers,
