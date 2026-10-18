@@ -19,6 +19,7 @@ tier 3 is for.
 
 from __future__ import annotations
 
+import json
 import re
 import xml.etree.ElementTree as ET
 from typing import Any
@@ -50,6 +51,12 @@ _OEMBED_ENDPOINTS: dict[Platform, str] = {
 }
 
 _MAX_BYTES = 3_000_000  # a 3 MB page is already pathological; stop reading
+_INSTAGRAM_CONTEXT_JSON = re.compile(r'"contextJSON"\s*:\s*')
+_INSTAGRAM_EMBED_UA = (
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 26_2 like Mac OS X) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.2 "
+    "Mobile/15E148 Safari/604.1"
+)
 
 # A blocked or JS-shell page still returns HTTP 200 with a title. Left unchecked,
 # that title becomes a "successful" extraction, poisons your telemetry and hides the
@@ -143,6 +150,12 @@ class OpenGraphExtractor(Extractor):
             candidate = target.envelope(self.tier, **oembed_fields)
             envelope = candidate if envelope is None else envelope.merged_with(candidate)
 
+        instagram_fields = self._from_instagram_embed(target)
+        if instagram_fields:
+            notes.append("instagram embed")
+            candidate = target.envelope(self.tier, **instagram_fields)
+            envelope = candidate if envelope is None else envelope.merged_with(candidate)
+
         html_fields = self._from_html(target)
         if html_fields:
             notes.append("og/html")
@@ -198,6 +211,45 @@ class OpenGraphExtractor(Extractor):
             if text:
                 fields["caption"] = text
         return {k: v for k, v in fields.items() if v}
+
+    # ---------------------------------------------------------- Instagram embed
+    def _from_instagram_embed(self, target: ExtractionTarget) -> dict[str, Any]:
+        """Recover public Reel/Post data from Instagram's unauthenticated embed page.
+
+        Instagram's normal page is frequently a login shell when fetched from a
+        datacenter, and its internal JSON endpoint can reject even fresh yt-dlp
+        cookies.  The public embed page still carries a JSON-encoded ``contextJSON``
+        payload with the caption, author, thumbnail and, for Reels, a signed video
+        URL.  This is a free fallback and is only attempted for Instagram targets.
+        """
+        if target.platform is not Platform.INSTAGRAM:
+            return {}
+
+        embed_url = f"{target.canonical_url.rstrip('/')}/embed/"
+        try:
+            assert_public_url(embed_url)
+        except UnsafeUrl:
+            return {}
+
+        try:
+            with httpx.Client(
+                timeout=self.config.http_timeout,
+                follow_redirects=True,
+                headers={
+                    # Instagram currently serves the useful contextJSON payload to its
+                    # mobile embed shell; the desktop shell is a different 500 KB page
+                    # with no contextJSON at all.
+                    "User-Agent": _INSTAGRAM_EMBED_UA,
+                    "Accept": "text/html,application/xhtml+xml",
+                    "Accept-Language": "en-US,en;q=0.9",
+                },
+            ) as client:
+                response = client.get(embed_url)
+            if response.status_code != 200:
+                return {}
+            return _parse_instagram_embed(response.text[:_MAX_BYTES])
+        except Exception:
+            return {}
 
     # ------------------------------------------------------------------ Medium
     def _from_medium_feed(self, target: ExtractionTarget) -> dict[str, Any]:
@@ -510,3 +562,56 @@ def _guess_kind(envelope: ContentEnvelope, platform: Platform) -> MediaKind:
     if envelope.thumbnail_url:
         return MediaKind.IMAGE
     return MediaKind.UNKNOWN
+
+
+def _parse_instagram_embed(html: str) -> dict[str, Any]:
+    """Parse Instagram's JSON string literal without executing page JavaScript."""
+    decoder = json.JSONDecoder()
+    for match in _INSTAGRAM_CONTEXT_JSON.finditer(html):
+        try:
+            context_json, _ = decoder.raw_decode(html, match.end())
+            if not isinstance(context_json, str):
+                continue
+            payload = json.loads(context_json)
+            media = payload["gql_data"]["shortcode_media"]
+            if not isinstance(media, dict):
+                continue
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+            continue
+
+        caption: str | None = None
+        try:
+            caption = clean_text(
+                to_str(media["edge_media_to_caption"]["edges"][0]["node"]["text"])
+            )
+        except (KeyError, IndexError, TypeError):
+            pass
+
+        owner = media.get("owner") if isinstance(media.get("owner"), dict) else {}
+        username = to_str(owner.get("username"))
+        is_video = bool(media.get("is_video"))
+
+        fields: dict[str, Any] = {
+            "title": f"{username} on Instagram" if username else None,
+            "caption": caption,
+            "author": username,
+            "author_url": f"https://www.instagram.com/{username}/" if username else None,
+            "thumbnail_url": to_str(media.get("display_url") or media.get("thumbnail_src")),
+            "media_url": to_str(media.get("video_url")),
+            "duration_s": to_float(media.get("video_duration")),
+            "platform_tags": extract_hashtags(caption),
+            "like_count": to_int(
+                (media.get("edge_liked_by") or {}).get("count")
+                if isinstance(media.get("edge_liked_by"), dict)
+                else None
+            ),
+            "view_count": to_int(media.get("video_view_count")),
+            "comment_count": to_int(
+                (media.get("edge_media_to_comment") or {}).get("count")
+                if isinstance(media.get("edge_media_to_comment"), dict)
+                else None
+            ),
+            "media_kind": MediaKind.VIDEO if is_video else MediaKind.IMAGE,
+        }
+        return {key: value for key, value in fields.items() if value not in (None, "", [])}
+    return {}
