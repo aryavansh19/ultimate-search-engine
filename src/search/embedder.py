@@ -35,6 +35,8 @@ from abc import ABC, abstractmethod
 import httpx
 import numpy as np
 
+from quota import embedder_governor
+
 from .config import SearchConfig
 
 log = logging.getLogger("search.embedder")
@@ -176,10 +178,11 @@ class BaseEmbedder(ABC):
         batch = max(1, self.config.embed_batch_size)
         for start in range(0, len(texts), batch):
             window = texts[start : start + batch]
-            if pace:
-                self._pace()
+            est_tokens = sum(max(1, len(t) // 4) for t in window)
+            # Adaptive rate and token pacing: keeps upstream embedder under limits
+            embedder_governor.acquire(estimated_tokens=est_tokens)
             vectors.extend(self._embed_batch(window, is_query=is_query))
-            self.estimated_tokens += sum(max(1, len(t) // 4) for t in window)
+            self.estimated_tokens += est_tokens
 
         matrix = np.asarray(vectors, dtype=np.float32)
         if matrix.ndim != 2 or matrix.shape[1] != self.config.dimensions:
@@ -211,30 +214,37 @@ class BaseEmbedder(ABC):
                 with httpx.Client(timeout=self.config.request_timeout) as client:
                     response = client.post(url, json=payload, headers=headers)
                 if response.status_code == 200:
-                    return response.json()
+                    data = response.json()
+                    # Extract usage if returned by OpenAI/OpenRouter compatible endpoints
+                    usage = data.get("usage") or {}
+                    actual_tokens = int(usage.get("total_tokens") or 0)
+                    embedder_governor.record_success(actual_tokens=actual_tokens)
+                    return data
                 body = " ".join(response.text.split())[:240]
                 last_error = f"HTTP {response.status_code}: {body}"
                 if response.status_code not in _RETRY_STATUSES:
+                    embedder_governor.record_error(status_code=response.status_code)
                     break
 
                 if response.status_code == 429:
                     quota = _quota_violation(response)
+                    retry_after = _retry_after(response)
+                    cooldown = embedder_governor.record_error(
+                        status_code=429, retry_after=retry_after, error_body=body
+                    )
                     if quota:
                         last_error = f"quota exhausted: {quota}"
-                        # A daily quota cannot clear by waiting inside this call. Both
-                        # providers word it differently -- Google sends
-                        # `...PerDayPerProjectPerModel`, OpenRouter sends
-                        # `free-models-per-day` -- so match case-insensitively on both. A
-                        # missed match here cost 20 seconds per search before falling back
-                        # to keyword, which reads as a hang rather than a quota message.
+                        # A daily quota cannot clear by waiting inside this call.
                         flat = quota.replace("-", "").replace("_", "").lower()
                         if "perday" in flat:
                             break
-                    delay = _retry_after(response) or min(20.0 * (attempt + 1), 60.0)
+                    delay = retry_after or cooldown or min(20.0 * (attempt + 1), 60.0)
                 else:
+                    embedder_governor.record_error(status_code=response.status_code)
                     delay = 1.5 * (attempt + 1)
             except httpx.HTTPError as exc:
                 last_error = f"{type(exc).__name__}: {exc}"
+                embedder_governor.record_error(status_code=500)
                 delay = 1.5 * (attempt + 1)
 
             if attempt < attempts - 1:

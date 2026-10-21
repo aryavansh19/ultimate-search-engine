@@ -1,0 +1,643 @@
+[
+  {
+    "index": 11,
+    "platform": "reddit",
+    "url": "https://old.reddit.com/r/crowdstrike/comments/1e6vmkf/bsod_error_in_latest_crowdstrike_update/",
+    "status_code": 200,
+    "latency_ms": 10.03,
+    "outcome": "PASS",
+    "details_count": 3,
+    "tags_count": 9,
+    "extracted_word_count": 17,
+    "ai_model": "gemini-3.5-flash-lite",
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/crowdstrike/comments/1e6vmkf/",
+      "url_hash": "b0c54bb8c208afb5b69ceb56e7e2f42fb23fbd6dacc9fc9041196f8e5df52b50",
+      "title": "BSOD error in latest crowdstrike update",
+      "summary": "Reddit post discussing a blue screen of death error caused by the latest CrowdStrike update.",
+      "description": "User TipOFMYTONGUEDAMN posted on the CrowdStrike subreddit reporting a critical BSOD error affecting systems after installing the most recent software update. The discussion centers around widespread system crashes and troubleshooting steps.",
+      "details": [
+        "reads the title mentioning BSOD error in latest crowdstrike update",
+        "notes the author username TipOFMYTONGUEDAMN",
+        "views the crowdstrike subreddit community page"
+      ],
+      "tags": [
+        "crowdstrike",
+        "bsod",
+        "window",
+        "sysadmin",
+        "error",
+        "crash",
+        "update",
+        "software",
+        "troubleshooting"
+      ],
+      "category": "technology",
+      "content_type": "discussion",
+      "entities": {
+        "people": [
+          "TipOFMYTONGUEDAMN"
+        ],
+        "organizations": [
+          "CrowdStrike"
+        ],
+        "places": [],
+        "products": [
+          "CrowdStrike"
+        ]
+      },
+      "language": "en",
+      "mode": "metadata",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "input_tokens": 484,
+      "output_tokens": 275,
+      "cost_usd": 0.0008327,
+      "duration_ms": 1972,
+      "degraded": false,
+      "note": "text only",
+      "extraction": {
+        "tier": "open_graph",
+        "signal": "weak",
+        "media_kind": "unknown",
+        "degraded": false,
+        "word_count": 17,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "oembed"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 12,
+    "platform": "reddit",
+    "url": "https://old.reddit.com/r/apolloapp/comments/144f6xm/apollo_will_close_down_on_june_30th_reddits/",
+    "status_code": 200,
+    "latency_ms": 4.31,
+    "outcome": "PASS",
+    "details_count": 3,
+    "tags_count": 6,
+    "extracted_word_count": 75,
+    "ai_model": "gemini-3.5-flash-lite",
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/apolloapp/comments/144f6xm/",
+      "url_hash": "1a5945349afb63ba991eaea47a4f6452046d4defeb3d42bcaf56c3239fbe401f",
+      "title": "📣 Apollo will close down on June 30th. Reddit’s recent decisions and actions have unfortunately made it impossible for Apollo to continue. Thank you so, so much for all the support over the years. ❤️",
+      "summary": "Apollo app developer announces the app will shut down on June 30th due to Reddit changes.",
+      "description": "Developer Christian Selig (u/iamthatis) announces the definitive closure of the popular third-party Reddit app Apollo. The shutdown is attributed to recent API pricing and policy decisions made by Reddit that made continued operation impossible.",
+      "details": [
+        "Announces the closure date of June 30th for the Apollo app",
+        "Blames Reddit's recent decisions and actions for forcing the shutdown",
+        "Expresses gratitude to users for their support over the years in the post caption"
+      ],
+      "tags": [
+        "apollo",
+        "shutdown",
+        "third-party-app",
+        "api-pricing",
+        "iamthatis",
+        "ios-app"
+      ],
+      "category": "technology",
+      "content_type": "announcement",
+      "entities": {
+        "people": [
+          "iamthatis"
+        ],
+        "organizations": [
+          "Reddit",
+          "Apollo"
+        ],
+        "places": [],
+        "products": [
+          "Apollo"
+        ]
+      },
+      "language": "en",
+      "mode": "metadata",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "input_tokens": 549,
+      "output_tokens": 281,
+      "cost_usd": 0.0008672,
+      "duration_ms": 2771,
+      "degraded": false,
+      "note": "text only",
+      "extraction": {
+        "tier": "open_graph",
+        "signal": "strong",
+        "media_kind": "unknown",
+        "degraded": false,
+        "word_count": 75,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "oembed"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 13,
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/swift/comments/166p5d5/what_are_your_favorite_swift_features/",
+    "status_code": 200,
+    "latency_ms": 1.62,
+    "outcome": "PASS",
+    "details_count": 3,
+    "tags_count": 4,
+    "extracted_word_count": 23,
+    "ai_model": "gemini-3.5-flash-lite",
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/swift/comments/166p5d5/",
+      "url_hash": "644d262b223e8269ebfd5393d0a725aa1d38f413a996f7899189e181fa6ac67f",
+      "title": "DAE air type or am I the only one?",
+      "summary": "A Reddit post asking if anyone else uses air typing on their devices.",
+      "description": "The author u/eggstacee asks a DoesAnybodyElse community thread if other users air type. The discussion revolves around the habit of typing in the air with fingers.",
+      "details": [
+        "asks if anyone air types in the title",
+        "posts in the DoesAnybodyElse subreddit",
+        "uses the handle u/eggstacee"
+      ],
+      "tags": [
+        "air-typing",
+        "habit",
+        "typing",
+        "discussion"
+      ],
+      "category": "lifestyle",
+      "content_type": "discussion",
+      "entities": {
+        "people": [
+          "eggstacee"
+        ],
+        "organizations": [
+          "Reddit"
+        ],
+        "places": [],
+        "products": []
+      },
+      "language": "en",
+      "mode": "metadata",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "input_tokens": 483,
+      "output_tokens": 214,
+      "cost_usd": 0.0006799,
+      "duration_ms": 2018,
+      "degraded": false,
+      "note": "text only",
+      "extraction": {
+        "tier": "open_graph",
+        "signal": "weak",
+        "media_kind": "unknown",
+        "degraded": false,
+        "word_count": 23,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "oembed"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 14,
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/swift/comments/17sow67/swift_macros_tips_and_tricks/",
+    "status_code": 200,
+    "latency_ms": 1.36,
+    "outcome": "PASS",
+    "details_count": 4,
+    "tags_count": 4,
+    "extracted_word_count": 19,
+    "ai_model": "gemini-3.5-flash-lite",
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/swift/comments/17sow67/",
+      "url_hash": "fbfbabc1245905062aee0895ca8d1c0eb0fc9e9b5f624a3b3e53bc1eff96fc42",
+      "title": "Why did I lose 9 million dollars?",
+      "summary": "Reddit post asking why the user lost 9 million dollars in BitLifeApp.",
+      "description": "User RulrOfOmicronPersei8 asks the r/swift community why they lost 9 million dollars, though the context indicates the game is actually BitLifeApp. The post title humorously implies a programming or finance disaster while referencing a simulation mobile game.",
+      "details": [
+        "posts the question why did I lose 9 million dollars on Reddit",
+        "shares the post under the r/swift subreddit",
+        "attributes the author as RulrOfOmicronPersei8",
+        "tags the post with the BitLifeApp community"
+      ],
+      "tags": [
+        "bitlifeapp",
+        "swift",
+        "mobile-game",
+        "finance"
+      ],
+      "category": "gaming",
+      "content_type": "discussion",
+      "entities": {
+        "people": [
+          "RulrOfOmicronPersei8"
+        ],
+        "organizations": [
+          "Reddit"
+        ],
+        "places": [],
+        "products": [
+          "BitLifeApp"
+        ]
+      },
+      "language": "en",
+      "mode": "metadata",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "input_tokens": 488,
+      "output_tokens": 276,
+      "cost_usd": 0.0008364,
+      "duration_ms": 2455,
+      "degraded": false,
+      "note": "text only",
+      "extraction": {
+        "tier": "open_graph",
+        "signal": "weak",
+        "media_kind": "unknown",
+        "degraded": false,
+        "word_count": 19,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "oembed + og/html"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 15,
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/swift/comments/18j1382/how_are_you_structuring_your_swiftui_apps_in/",
+    "status_code": 200,
+    "latency_ms": 4028.83,
+    "outcome": "PASS",
+    "details_count": 2,
+    "tags_count": 4,
+    "extracted_word_count": 0,
+    "ai_model": "gemini-3.5-flash-lite",
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/swift/comments/18j1382/",
+      "url_hash": "5322ae1b7550ec1c91d8d162da2280705d757a5b6a8dcdd079ebfec5c4b9b06a",
+      "title": null,
+      "summary": "Reddit discussion post in r/swift regarding an unspecified topic.",
+      "description": "This is an empty or deleted reddit thread from the r/swift subreddit. No specific text, code snippets, or solutions are available in the content.",
+      "details": [
+        "reads the subreddit title r/swift",
+        "views the thread ID 18j1382"
+      ],
+      "tags": [
+        "swift",
+        "programming",
+        "ios",
+        "development"
+      ],
+      "category": "software-engineering",
+      "content_type": "discussion",
+      "entities": {
+        "people": [],
+        "organizations": [
+          "Reddit"
+        ],
+        "places": [],
+        "products": []
+      },
+      "language": "en",
+      "mode": "metadata",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "input_tokens": 437,
+      "output_tokens": 169,
+      "cost_usd": 0.0005536,
+      "duration_ms": 2031,
+      "degraded": true,
+      "note": "text only",
+      "extraction": {
+        "tier": "degraded",
+        "signal": "none",
+        "media_kind": "unknown",
+        "degraded": true,
+        "word_count": 0,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "all tiers failed; URL retained for reprocessing"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 16,
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/technology/comments/18q9wke/eu_passes_landmark_artificial_intelligence_act/",
+    "status_code": 200,
+    "latency_ms": 4367.77,
+    "outcome": "PASS",
+    "details_count": 2,
+    "tags_count": 4,
+    "extracted_word_count": 0,
+    "ai_model": "gemini-3.5-flash-lite",
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/technology/comments/18q9wke/",
+      "url_hash": "4d0256f5eeb813398ec7ecfe3455ec31c506bfd236f040e27fa8d86b5633c14d",
+      "title": null,
+      "summary": "Empty Reddit link providing no content to analyze or index.",
+      "description": "The provided URL contains no text, title, or body content to extract information from. Consequently, no specific steps, entities, or details are available.",
+      "details": [
+        "displays an empty content area on the page",
+        "shows no text or media in the submission"
+      ],
+      "tags": [
+        "empty",
+        "technology",
+        "error",
+        "unclear"
+      ],
+      "category": "technology",
+      "content_type": "other",
+      "entities": {
+        "people": [],
+        "organizations": [],
+        "places": [],
+        "products": []
+      },
+      "language": "en",
+      "mode": "metadata",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "input_tokens": 436,
+      "output_tokens": 111,
+      "cost_usd": 0.0004083,
+      "duration_ms": 1847,
+      "degraded": true,
+      "note": "text only",
+      "extraction": {
+        "tier": "degraded",
+        "signal": "none",
+        "media_kind": "unknown",
+        "degraded": true,
+        "word_count": 0,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "all tiers failed; URL retained for reprocessing"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 17,
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/programming/comments/17b2pkn/sqlite_is_35_faster_than_the_filesystem/",
+    "status_code": 200,
+    "latency_ms": 2090.06,
+    "outcome": "PASS",
+    "details_count": 2,
+    "tags_count": 2,
+    "extracted_word_count": 5,
+    "ai_model": "gemini-3.5-flash-lite",
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/programming/comments/17b2pkn/",
+      "url_hash": "5e7cf0658efd3554c3097184db8f874ecda59f676c62997aa75dddc630b5976f",
+      "title": "Spun",
+      "summary": "Unclear programming content titled Spun by Pnpgay.",
+      "description": "The provided link contains insufficient information to determine the topic, code, or context of the programming discussion. Only the title Spun and the author Pnpgay are available.",
+      "details": [
+        "displays the title Spun on the page",
+        "indicates the author as Pnpgay"
+      ],
+      "tags": [
+        "programming",
+        "spun"
+      ],
+      "category": "software-engineering",
+      "content_type": "discussion",
+      "entities": {
+        "people": [],
+        "organizations": [],
+        "places": [],
+        "products": []
+      },
+      "language": "en",
+      "mode": "metadata",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "input_tokens": 452,
+      "output_tokens": 149,
+      "cost_usd": 0.0005081,
+      "duration_ms": 2087,
+      "degraded": false,
+      "note": "text only",
+      "extraction": {
+        "tier": "open_graph",
+        "signal": "weak",
+        "media_kind": "unknown",
+        "degraded": false,
+        "word_count": 5,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "oembed + og/html"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 18,
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/apple/comments/188045v/m3_max_macbook_pro_one_month_later/",
+    "status_code": 200,
+    "latency_ms": 1766.26,
+    "outcome": "PASS",
+    "details_count": 2,
+    "tags_count": 6,
+    "extracted_word_count": 15,
+    "ai_model": "gemini-3.5-flash-lite",
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/apple/comments/188045v/",
+      "url_hash": "435cf2f2ce8d8e0a54588d214fd21e6e7fc34ac7d71d658b61ae437178666e42",
+      "title": "Supreme BOGO Week In Store",
+      "summary": "Supreme BOGO week in-store announcement and discussion on Reddit.",
+      "description": "A Reddit post shared by u/BeastieBoyzz discussing the Supreme box logo week in-store release. Users comment on store stock, drops, and shopping experiences.",
+      "details": [
+        "reads the title Supreme BOGO Week In Store on Reddit",
+        "notes the author u/BeastieBoyzz in the Supreme subreddit"
+      ],
+      "tags": [
+        "supreme",
+        "bogo",
+        "box-logo",
+        "streetwear",
+        "shopping",
+        "fashion"
+      ],
+      "category": "fashion-beauty",
+      "content_type": "discussion",
+      "entities": {
+        "people": [
+          "BeastieBoyzz"
+        ],
+        "organizations": [
+          "Supreme",
+          "Reddit"
+        ],
+        "places": [],
+        "products": [
+          "Supreme BOGO"
+        ]
+      },
+      "language": "en",
+      "mode": "metadata",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "input_tokens": 472,
+      "output_tokens": 239,
+      "cost_usd": 0.0007391,
+      "duration_ms": 1762,
+      "degraded": false,
+      "note": "text only",
+      "extraction": {
+        "tier": "open_graph",
+        "signal": "weak",
+        "media_kind": "unknown",
+        "degraded": false,
+        "word_count": 15,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "oembed + og/html"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 19,
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/webdev/comments/18t9q41/what_backend_framework_do_you_enjoy_the_most/",
+    "status_code": 200,
+    "latency_ms": 2003.17,
+    "outcome": "PASS",
+    "details_count": 2,
+    "tags_count": 5,
+    "extracted_word_count": 19,
+    "ai_model": "gemini-3.5-flash-lite",
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/webdev/comments/18t9q41/",
+      "url_hash": "96affed516deffc1f7606546f4128deb57d72f8c23e6a5b5adcaab334614dcfa",
+      "title": "My most funny, favorite moments in Lethal Company",
+      "summary": "A compilation of funny and favorite gameplay moments from Lethal Company.",
+      "description": "The post shares comedic highlights encountered while playing the cooperative horror game Lethal Company. It captures memorable and amusing situations that happened during gameplay sessions.",
+      "details": [
+        "shares funny gameplay moments from Lethal Company",
+        "discusses favorite in-game experiences within Lethal Company"
+      ],
+      "tags": [
+        "lethal-company",
+        "gaming",
+        "funny-moment",
+        "coop-horror",
+        "gameplay"
+      ],
+      "category": "gaming",
+      "content_type": "other",
+      "entities": {
+        "people": [],
+        "organizations": [],
+        "places": [],
+        "products": [
+          "Lethal Company"
+        ]
+      },
+      "language": "en",
+      "mode": "metadata",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "input_tokens": 468,
+      "output_tokens": 198,
+      "cost_usd": 0.0006354,
+      "duration_ms": 2000,
+      "degraded": false,
+      "note": "text only",
+      "extraction": {
+        "tier": "open_graph",
+        "signal": "weak",
+        "media_kind": "unknown",
+        "degraded": false,
+        "word_count": 19,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "oembed"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 20,
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/apple/comments/19f3e49/apple_announces_changes_to_ios_safari_and_the_app/",
+    "status_code": 200,
+    "latency_ms": 1853.37,
+    "outcome": "PASS",
+    "details_count": 2,
+    "tags_count": 4,
+    "extracted_word_count": 19,
+    "ai_model": "gemini-3.5-flash-lite",
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/apple/comments/19f3e49/",
+      "url_hash": "9aeab93d62e5eab46ee852e936ce2611f2a1a132b8385d47b3fea9a38cbbc410",
+      "title": "embarrassing reminder of what happened at camp",
+      "summary": "Embarrassing personal recollection of an incident that happened at camp.",
+      "description": "The author u/Jumpy-Sympathy9026 shares a brief, embarrassing reminder of an event that occurred during their time at camp. The post consists only of a short title without further elaboration or details.",
+      "details": [
+        "shares an embarrassing memory in the title",
+        "mentions camp as the setting of the incident"
+      ],
+      "tags": [
+        "camp",
+        "personal-story",
+        "embarrassing-memory",
+        "lifestyle"
+      ],
+      "category": "lifestyle",
+      "content_type": "discussion",
+      "entities": {
+        "people": [
+          "u/Jumpy-Sympathy9026"
+        ],
+        "organizations": [
+          "reddit"
+        ],
+        "places": [],
+        "products": []
+      },
+      "language": "en",
+      "mode": "metadata",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "input_tokens": 493,
+      "output_tokens": 220,
+      "cost_usd": 0.0006979,
+      "duration_ms": 1851,
+      "degraded": false,
+      "note": "text only",
+      "extraction": {
+        "tier": "open_graph",
+        "signal": "weak",
+        "media_kind": "unknown",
+        "degraded": false,
+        "word_count": 19,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "oembed"
+      },
+      "embedding": null
+    }
+  }
+]

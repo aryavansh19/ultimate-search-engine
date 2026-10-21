@@ -1,0 +1,23 @@
+[
+  {
+    "id": "sample_yt_1",
+    "platform": "youtube",
+    "genre": "technology",
+    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "notes": "Classic sample YouTube link"
+  },
+  {
+    "id": "sample_reddit_1",
+    "platform": "reddit",
+    "genre": "programming",
+    "url": "https://www.reddit.com/r/Python/comments/1example/sample_post/",
+    "notes": "Reddit text and comments sample"
+  },
+  {
+    "id": "sample_article_1",
+    "platform": "article",
+    "genre": "news",
+    "url": "https://en.wikipedia.org/wiki/Information_retrieval",
+    "notes": "Static text article sample"
+  }
+]

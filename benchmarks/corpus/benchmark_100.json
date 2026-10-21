@@ -1,0 +1,402 @@
+[
+  {
+    "platform": "wikipedia",
+    "url": "https://en.wikipedia.org/wiki/Quantum_computing_in_India"
+  },
+  {
+    "platform": "wikipedia",
+    "url": "https://en.wikipedia.org/wiki/Quantum_Computing_Since_Democritus"
+  },
+  {
+    "platform": "wikipedia",
+    "url": "https://en.wikipedia.org/wiki/Artificial_intelligence_in_healthcare"
+  },
+  {
+    "platform": "wikipedia",
+    "url": "https://en.wikipedia.org/wiki/Quantum_computing_scaling_laws"
+  },
+  {
+    "platform": "wikipedia",
+    "url": "https://en.wikipedia.org/wiki/Quantum_computing"
+  },
+  {
+    "platform": "wikipedia",
+    "url": "https://en.wikipedia.org/wiki/Italian_cuisine"
+  },
+  {
+    "platform": "wikipedia",
+    "url": "https://en.wikipedia.org/wiki/Iranian_cuisine"
+  },
+  {
+    "platform": "wikipedia",
+    "url": "https://en.wikipedia.org/wiki/National_parks_of_the_United_Kingdom"
+  },
+  {
+    "platform": "wikipedia",
+    "url": "https://en.wikipedia.org/wiki/National_parks_of_Canada"
+  },
+  {
+    "platform": "wikipedia",
+    "url": "https://en.wikipedia.org/wiki/National_park"
+  },
+  {
+    "platform": "reddit",
+    "url": "https://old.reddit.com/r/crowdstrike/comments/1e6vmkf/bsod_error_in_latest_crowdstrike_update/"
+  },
+  {
+    "platform": "reddit",
+    "url": "https://old.reddit.com/r/apolloapp/comments/144f6xm/apollo_will_close_down_on_june_30th_reddits/"
+  },
+  {
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/swift/comments/166p5d5/what_are_your_favorite_swift_features/"
+  },
+  {
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/swift/comments/17sow67/swift_macros_tips_and_tricks/"
+  },
+  {
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/swift/comments/18j1382/how_are_you_structuring_your_swiftui_apps_in/"
+  },
+  {
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/technology/comments/18q9wke/eu_passes_landmark_artificial_intelligence_act/"
+  },
+  {
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/programming/comments/17b2pkn/sqlite_is_35_faster_than_the_filesystem/"
+  },
+  {
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/apple/comments/188045v/m3_max_macbook_pro_one_month_later/"
+  },
+  {
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/webdev/comments/18t9q41/what_backend_framework_do_you_enjoy_the_most/"
+  },
+  {
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/apple/comments/19f3e49/apple_announces_changes_to_ios_safari_and_the_app/"
+  },
+  {
+    "platform": "medium",
+    "url": "https://mooseyanon.medium.com/github-f-ck-your-name-change-de599033bbbe"
+  },
+  {
+    "platform": "medium",
+    "url": "https://medium.com/@dan_abramov/goodbye-clean-code-b952a64c40c8"
+  },
+  {
+    "platform": "medium",
+    "url": "https://medium.com/netflix-techblog/extracting-audio-features-at-scale-with-netflix-chopin-7e5d87042a9b"
+  },
+  {
+    "platform": "medium",
+    "url": "https://medium.com/@kentcdodds/authentication-in-react-applications-65c2645ecd6f"
+  },
+  {
+    "platform": "medium",
+    "url": "https://medium.com/airbnb-engineering/migrating-from-enzyme-to-react-testing-library-at-airbnb-6c61f22467d3"
+  },
+  {
+    "platform": "medium",
+    "url": "https://medium.com/discord-blog/how-discord-stores-trillions-of-messages-530477ec512b"
+  },
+  {
+    "platform": "medium",
+    "url": "https://medium.com/uber-eng/building-scalable-systems-using-microservices-at-uber-1b8f04b4c5c7"
+  },
+  {
+    "platform": "medium",
+    "url": "https://medium.com/@karpathy/yes-you-should-understand-backprop-e2f06eab496b"
+  },
+  {
+    "platform": "medium",
+    "url": "https://medium.com/@addyosmani/the-cost-of-javascript-in-2018-7d8950fbb5d4"
+  },
+  {
+    "platform": "medium",
+    "url": "https://medium.com/google-design/the-evolution-of-material-design-34f77d337d12"
+  },
+  {
+    "platform": "youtube",
+    "url": "https://www.youtube.com/watch?v=kJQP7kiw5Fk"
+  },
+  {
+    "platform": "youtube",
+    "url": "https://www.youtube.com/watch?v=jNQXAC9IVRw"
+  },
+  {
+    "platform": "youtube",
+    "url": "https://www.youtube.com/watch?v=aircAruvnKk"
+  },
+  {
+    "platform": "youtube",
+    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+  },
+  {
+    "platform": "youtube",
+    "url": "https://www.youtube.com/watch?v=F1B9Fk_SgI0"
+  },
+  {
+    "platform": "youtube",
+    "url": "https://www.youtube.com/watch?v=k2qgadSvNyU"
+  },
+  {
+    "platform": "youtube",
+    "url": "https://www.youtube.com/watch?v=OPf0YbXqDm0"
+  },
+  {
+    "platform": "youtube",
+    "url": "https://www.youtube.com/watch?v=2Vv-BfVoq4g"
+  },
+  {
+    "platform": "youtube",
+    "url": "https://www.youtube.com/watch?v=JGwWNGJdvx8"
+  },
+  {
+    "platform": "youtube",
+    "url": "https://www.youtube.com/watch?v=09R8_2nJtjg"
+  },
+  {
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/C25W1z-s4jE/"
+  },
+  {
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/C4Fv0UtrL7a/"
+  },
+  {
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/C3bXW8-reL7/"
+  },
+  {
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/C10xL5sM8nE/"
+  },
+  {
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/C8Rz4S-w1tP/"
+  },
+  {
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/C7Py3Q-v0sO/"
+  },
+  {
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/C04dM2tP1gA/"
+  },
+  {
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/C6Kx2M-t9rN/"
+  },
+  {
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/C5Hw1P-s8qL/"
+  },
+  {
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/DAW27X-z4wS/"
+  },
+  {
+    "platform": "github",
+    "url": "https://github.com/rasbt/LLMs-from-scratch"
+  },
+  {
+    "platform": "github",
+    "url": "https://github.com/tensorflow/tensorflow"
+  },
+  {
+    "platform": "github",
+    "url": "https://github.com/f/prompts.chat"
+  },
+  {
+    "platform": "github",
+    "url": "https://github.com/AUTOMATIC1111/stable-diffusion-webui"
+  },
+  {
+    "platform": "github",
+    "url": "https://github.com/justjavac/free-programming-books-zh_CN"
+  },
+  {
+    "platform": "github",
+    "url": "https://github.com/pytorch/pytorch"
+  },
+  {
+    "platform": "github",
+    "url": "https://github.com/jaywcjlove/awesome-mac"
+  },
+  {
+    "platform": "github",
+    "url": "https://github.com/tw93/Mole"
+  },
+  {
+    "platform": "github",
+    "url": "https://github.com/huggingface/transformers"
+  },
+  {
+    "platform": "github",
+    "url": "https://github.com/appwrite/appwrite"
+  },
+  {
+    "platform": "developer_docs",
+    "url": "https://developer.apple.com/documentation/swiftui/view"
+  },
+  {
+    "platform": "developer_docs",
+    "url": "https://developer.apple.com/documentation/foundation/urlsession"
+  },
+  {
+    "platform": "developer_docs",
+    "url": "https://developer.apple.com/documentation/linkpresentation/lpmetadataprovider"
+  },
+  {
+    "platform": "developer_docs",
+    "url": "https://developer.apple.com/documentation/uikit/uiviewcontroller"
+  },
+  {
+    "platform": "developer_docs",
+    "url": "https://developer.apple.com/documentation/observation/observable"
+  },
+  {
+    "platform": "developer_docs",
+    "url": "https://developer.apple.com/documentation/coredata/nsmanagedobject"
+  },
+  {
+    "platform": "developer_docs",
+    "url": "https://developer.apple.com/documentation/combine/publisher"
+  },
+  {
+    "platform": "developer_docs",
+    "url": "https://developer.apple.com/documentation/avfoundation/avplayer"
+  },
+  {
+    "platform": "developer_docs",
+    "url": "https://developer.apple.com/documentation/swiftui/text"
+  },
+  {
+    "platform": "developer_docs",
+    "url": "https://developer.apple.com/documentation/metal/mtldevice"
+  },
+  {
+    "platform": "arxiv",
+    "url": "https://arxiv.org/abs/2610.26860v1"
+  },
+  {
+    "platform": "arxiv",
+    "url": "https://arxiv.org/abs/2610.26856v1"
+  },
+  {
+    "platform": "arxiv",
+    "url": "https://arxiv.org/abs/2610.26852v1"
+  },
+  {
+    "platform": "arxiv",
+    "url": "https://arxiv.org/abs/2610.26848v1"
+  },
+  {
+    "platform": "arxiv",
+    "url": "https://arxiv.org/abs/2610.26845v1"
+  },
+  {
+    "platform": "arxiv",
+    "url": "https://arxiv.org/abs/2610.26844v1"
+  },
+  {
+    "platform": "arxiv",
+    "url": "https://arxiv.org/abs/2610.26840v1"
+  },
+  {
+    "platform": "arxiv",
+    "url": "https://arxiv.org/abs/2610.26800v1"
+  },
+  {
+    "platform": "arxiv",
+    "url": "https://arxiv.org/abs/2610.26847v1"
+  },
+  {
+    "platform": "arxiv",
+    "url": "https://arxiv.org/abs/2610.26796v1"
+  },
+  {
+    "platform": "substack",
+    "url": "https://www.astralcodexten.com/p/heuristics-that-almost-always-work"
+  },
+  {
+    "platform": "substack",
+    "url": "https://www.astralcodexten.com/p/ai-safety-is-not-a-corporate-plot"
+  },
+  {
+    "platform": "substack",
+    "url": "https://www.astralcodexten.com/p/your-book-review-progress-and-poverty"
+  },
+  {
+    "platform": "substack",
+    "url": "https://www.astralcodexten.com/p/top-forecasters-on-the-plague"
+  },
+  {
+    "platform": "substack",
+    "url": "https://www.astralcodexten.com/p/our-ai-midwife"
+  },
+  {
+    "platform": "substack",
+    "url": "https://www.astralcodexten.com/p/the-specter-of-neuralese"
+  },
+  {
+    "platform": "substack",
+    "url": "https://www.astralcodexten.com/p/does-georgism-work-five-years-later"
+  },
+  {
+    "platform": "substack",
+    "url": "https://www.astralcodexten.com/p/mysteries-of-ai-generalization"
+  },
+  {
+    "platform": "substack",
+    "url": "https://www.astralcodexten.com/p/open-thread-456"
+  },
+  {
+    "platform": "substack",
+    "url": "https://www.astralcodexten.com/p/your-book-review-storm-of-steel"
+  },
+  {
+    "platform": "saas_product",
+    "url": "https://datadoghq.com/product/"
+  },
+  {
+    "platform": "saas_product",
+    "url": "https://resend.com/"
+  },
+  {
+    "platform": "saas_product",
+    "url": "https://sentry.io/for/python/"
+  },
+  {
+    "platform": "saas_product",
+    "url": "https://slack.com/features"
+  },
+  {
+    "platform": "saas_product",
+    "url": "https://asana.com/product"
+  },
+  {
+    "platform": "saas_product",
+    "url": "https://www.atlassian.com/software/jira"
+  },
+  {
+    "platform": "saas_product",
+    "url": "https://about.gitlab.com/pricing/"
+  },
+  {
+    "platform": "saas_product",
+    "url": "https://notion.so/product"
+  },
+  {
+    "platform": "saas_product",
+    "url": "https://blog.cloudflare.com/typescript-rust-port/"
+  },
+  {
+    "platform": "saas_product",
+    "url": "https://supabase.com/database"
+  }
+]

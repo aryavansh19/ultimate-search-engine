@@ -27,6 +27,8 @@ from urllib.parse import urlparse
 
 import httpx
 
+from ..http_client import get_shared_client
+
 from ..base import Extractor
 from ..envelope import (
     ContentEnvelope,
@@ -48,6 +50,7 @@ _OEMBED_ENDPOINTS: dict[Platform, str] = {
     Platform.YOUTUBE: "https://www.youtube.com/oembed",
     Platform.TIKTOK: "https://www.tiktok.com/oembed",
     Platform.TWITTER: "https://publish.twitter.com/oembed",
+    Platform.REDDIT: "https://www.reddit.com/oembed",
 }
 
 _MAX_BYTES = 3_000_000  # a 3 MB page is already pathological; stop reading
@@ -177,15 +180,13 @@ class OpenGraphExtractor(Extractor):
         if not endpoint:
             return {}
         try:
-            with httpx.Client(
-                timeout=self.config.http_timeout,
-                follow_redirects=True,
+            client = get_shared_client()
+            response = client.get(
+                endpoint,
+                params={"url": target.canonical_url, "format": "json"},
                 headers={"User-Agent": self.config.user_agent},
-            ) as client:
-                response = client.get(
-                    endpoint,
-                    params={"url": target.canonical_url, "format": "json"},
-                )
+                timeout=self.config.http_timeout,
+            )
             if response.status_code != 200:
                 return {}
             data = response.json()
@@ -201,8 +202,8 @@ class OpenGraphExtractor(Extractor):
             "author_url": to_str(data.get("author_url")),
             "thumbnail_url": to_str(data.get("thumbnail_url")),
         }
-        # X/Twitter oEmbed returns the tweet body inside an HTML blockquote.
-        if target.platform is Platform.TWITTER and data.get("html"):
+        # X/Twitter & Reddit oEmbed return text inside an HTML blockquote.
+        if (target.platform in (Platform.TWITTER, Platform.REDDIT)) and data.get("html"):
             from bs4 import BeautifulSoup
 
             soup = BeautifulSoup(str(data["html"]), "html.parser")
@@ -232,19 +233,16 @@ class OpenGraphExtractor(Extractor):
             return {}
 
         try:
-            with httpx.Client(
-                timeout=self.config.http_timeout,
-                follow_redirects=True,
+            client = get_shared_client()
+            response = client.get(
+                embed_url,
                 headers={
-                    # Instagram currently serves the useful contextJSON payload to its
-                    # mobile embed shell; the desktop shell is a different 500 KB page
-                    # with no contextJSON at all.
                     "User-Agent": _INSTAGRAM_EMBED_UA,
                     "Accept": "text/html,application/xhtml+xml",
                     "Accept-Language": "en-US,en;q=0.9",
                 },
-            ) as client:
-                response = client.get(embed_url)
+                timeout=self.config.http_timeout,
+            )
             if response.status_code != 200:
                 return {}
             return _parse_instagram_embed(response.text[:_MAX_BYTES])
@@ -273,12 +271,12 @@ class OpenGraphExtractor(Extractor):
             return {}
 
         try:
-            with httpx.Client(
+            client = get_shared_client()
+            response = client.get(
+                feed_url,
                 timeout=self.config.http_timeout,
-                follow_redirects=True,
                 headers={"User-Agent": self.config.user_agent},
-            ) as client:
-                response = client.get(feed_url)
+            )
             if response.status_code != 200:
                 return {}
             root = ET.fromstring(response.content)
@@ -337,11 +335,12 @@ class OpenGraphExtractor(Extractor):
     ) -> ET.Element | None:
         """Find the feed entry for this specific post.
 
-        Matched on the post id rather than the slug: Medium rewrites slugs when a title is
-        edited, but the trailing id is stable and appears in every item's guid.
+        Matched on post id first, exact path second, and base slug (without trailing hex id)
+        third for when Medium regenerates the hex ID upon edits.
         """
         items = root.findall("./channel/item")
         wanted_path = urlparse(canonical_url).path.rstrip("/").lower()
+        base_slug = re.sub(r"-[0-9a-f]{6,20}$", "", wanted_path.split("/")[-1]) if wanted_path else None
         for item in items:
             for tag in ("guid", "link"):
                 node = item.find(tag)
@@ -351,6 +350,8 @@ class OpenGraphExtractor(Extractor):
                 if post_id and post_id in value:
                     return item
                 if wanted_path and urlparse(value).path.rstrip("/").lower() == wanted_path:
+                    return item
+                if base_slug and len(base_slug) > 5 and base_slug in value:
                     return item
         return None
 
@@ -381,17 +382,18 @@ class OpenGraphExtractor(Extractor):
         ]
 
         data: Any = None
+        client = get_shared_client()
         for url in candidates:
             try:
-                with httpx.Client(
-                    timeout=self.config.http_timeout,
-                    follow_redirects=True,
+                response = client.get(
+                    url,
+                    params={"limit": 10, "raw_json": 1},
                     headers={
                         "User-Agent": self.config.user_agent,
                         "Accept": "application/json",
                     },
-                ) as client:
-                    response = client.get(url, params={"limit": 10, "raw_json": 1})
+                    timeout=self.config.http_timeout,
+                )
                 if response.status_code != 200:
                     continue
                 data = response.json()
@@ -484,23 +486,23 @@ class OpenGraphExtractor(Extractor):
             return {}
 
         try:
-            with httpx.Client(
-                timeout=self.config.http_timeout,
-                follow_redirects=True,
+            client = get_shared_client()
+            response = client.get(
+                target.canonical_url,
                 headers={
                     "User-Agent": self.config.user_agent,
                     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                     "Accept-Language": "en-US,en;q=0.9",
                 },
-            ) as client:
-                response = client.get(target.canonical_url)
-                if response.status_code >= 400:
-                    return {}
-                content_type = response.headers.get("content-type", "")
-                if "html" not in content_type and "xml" not in content_type:
-                    return {}
-                html = response.text[:_MAX_BYTES]
-                final_url = str(response.url)
+                timeout=self.config.http_timeout,
+            )
+            if response.status_code >= 400:
+                return {}
+            content_type = response.headers.get("content-type", "")
+            if "html" not in content_type and "xml" not in content_type:
+                return {}
+            html = response.text[:_MAX_BYTES]
+            final_url = str(response.url)
         except Exception:
             return {}
 

@@ -1,0 +1,605 @@
+[
+  {
+    "index": 11,
+    "platform": "reddit",
+    "url": "https://old.reddit.com/r/crowdstrike/comments/1e6vmkf/bsod_error_in_latest_crowdstrike_update/",
+    "status_code": 200,
+    "latency_ms": 7.44,
+    "outcome": "PASS",
+    "details_count": 0,
+    "tags_count": 9,
+    "extracted_word_count": 17,
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/crowdstrike/comments/1e6vmkf/",
+      "url_hash": "b0c54bb8c208afb5b69ceb56e7e2f42fb23fbd6dacc9fc9041196f8e5df52b50",
+      "title": "BSOD error in latest crowdstrike update",
+      "summary": "BSOD error in latest crowdstrike update",
+      "description": "BSOD error in latest crowdstrike update by u/TipOFMYTONGUEDAMN in crowdstrike",
+      "details": [],
+      "tags": [
+        "crowdstrike",
+        "bsod",
+        "error",
+        "latest",
+        "update",
+        "tipofmytonguedamn",
+        "title",
+        "author",
+        "caption"
+      ],
+      "category": "technology",
+      "content_type": "other",
+      "entities": {
+        "people": [
+          "TipOFMYTONGUEDAMN"
+        ],
+        "organizations": [],
+        "places": [],
+        "products": []
+      },
+      "language": "en",
+      "mode": "heuristic",
+      "provider": "heuristic",
+      "model": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost_usd": 0.0,
+      "duration_ms": 3,
+      "degraded": true,
+      "note": "keyword extraction; no language model was used; gemini unavailable (GEMINI_API_KEY not set); ashna unavailable (ASHNA_API_KEY not set)",
+      "extraction": {
+        "tier": "open_graph",
+        "signal": "weak",
+        "media_kind": "unknown",
+        "degraded": false,
+        "word_count": 17,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "oembed"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 12,
+    "platform": "reddit",
+    "url": "https://old.reddit.com/r/apolloapp/comments/144f6xm/apollo_will_close_down_on_june_30th_reddits/",
+    "status_code": 200,
+    "latency_ms": 3.63,
+    "outcome": "PASS",
+    "details_count": 0,
+    "tags_count": 15,
+    "extracted_word_count": 75,
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/apolloapp/comments/144f6xm/",
+      "url_hash": "1a5945349afb63ba991eaea47a4f6452046d4defeb3d42bcaf56c3239fbe401f",
+      "title": "📣 Apollo will close down on June 30th. Reddit’s recent decisions and actions have unfortunately made it impossible for Apollo to continue. Thank you so, so much for all the support over the years. ❤️",
+      "summary": "📣 Apollo will close down on June 30th.",
+      "description": "📣 Apollo will close down on June 30th. Reddit’s recent decisions and actions have unfortunately made it impossible for Apollo to continue. Thank you so, so much for all the support over the years.",
+      "details": [],
+      "tags": [
+        "apollo",
+        "close",
+        "recent",
+        "decision",
+        "action",
+        "unfortunately",
+        "impossible",
+        "continue",
+        "thank",
+        "support",
+        "year",
+        "iamthatis",
+        "apolloapp",
+        "title",
+        "author"
+      ],
+      "category": "other",
+      "content_type": "other",
+      "entities": {
+        "people": [
+          "iamthatis"
+        ],
+        "organizations": [
+          "Apollo",
+          "Reddit",
+          "Thank"
+        ],
+        "places": [],
+        "products": []
+      },
+      "language": "en",
+      "mode": "heuristic",
+      "provider": "heuristic",
+      "model": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost_usd": 0.0,
+      "duration_ms": 0,
+      "degraded": true,
+      "note": "keyword extraction; no language model was used; gemini unavailable (GEMINI_API_KEY not set); ashna unavailable (ASHNA_API_KEY not set)",
+      "extraction": {
+        "tier": "open_graph",
+        "signal": "strong",
+        "media_kind": "unknown",
+        "degraded": false,
+        "word_count": 75,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "oembed"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 13,
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/swift/comments/166p5d5/what_are_your_favorite_swift_features/",
+    "status_code": 200,
+    "latency_ms": 1.9,
+    "outcome": "PASS",
+    "details_count": 0,
+    "tags_count": 8,
+    "extracted_word_count": 23,
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/swift/comments/166p5d5/",
+      "url_hash": "644d262b223e8269ebfd5393d0a725aa1d38f413a996f7899189e181fa6ac67f",
+      "title": "DAE air type or am I the only one?",
+      "summary": "DAE air type or am I the only one?",
+      "description": "DAE air type or am I the only one? by u/eggstacee in DoesAnybodyElse",
+      "details": [],
+      "tags": [
+        "dae",
+        "air",
+        "type",
+        "eggstacee",
+        "doesanybodyelse",
+        "title",
+        "author",
+        "caption"
+      ],
+      "category": "other",
+      "content_type": "other",
+      "entities": {
+        "people": [
+          "eggstacee"
+        ],
+        "organizations": [],
+        "places": [],
+        "products": []
+      },
+      "language": "en",
+      "mode": "heuristic",
+      "provider": "heuristic",
+      "model": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost_usd": 0.0,
+      "duration_ms": 0,
+      "degraded": true,
+      "note": "keyword extraction; no language model was used; gemini unavailable (GEMINI_API_KEY not set); ashna unavailable (ASHNA_API_KEY not set)",
+      "extraction": {
+        "tier": "open_graph",
+        "signal": "weak",
+        "media_kind": "unknown",
+        "degraded": false,
+        "word_count": 23,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "oembed"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 14,
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/swift/comments/17sow67/swift_macros_tips_and_tricks/",
+    "status_code": 200,
+    "latency_ms": 2.02,
+    "outcome": "PASS",
+    "details_count": 0,
+    "tags_count": 8,
+    "extracted_word_count": 19,
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/swift/comments/17sow67/",
+      "url_hash": "fbfbabc1245905062aee0895ca8d1c0eb0fc9e9b5f624a3b3e53bc1eff96fc42",
+      "title": "Why did I lose 9 million dollars?",
+      "summary": "Why did I lose 9 million dollars?",
+      "description": "Why did I lose 9 million dollars? by u/RulrOfOmicronPersei8 in BitLifeApp",
+      "details": [],
+      "tags": [
+        "lose",
+        "million",
+        "dollar",
+        "rulrofomicronpersei8",
+        "bitlifeapp",
+        "title",
+        "author",
+        "caption"
+      ],
+      "category": "other",
+      "content_type": "other",
+      "entities": {
+        "people": [
+          "RulrOfOmicronPersei8"
+        ],
+        "organizations": [],
+        "places": [],
+        "products": []
+      },
+      "language": "en",
+      "mode": "heuristic",
+      "provider": "heuristic",
+      "model": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost_usd": 0.0,
+      "duration_ms": 0,
+      "degraded": true,
+      "note": "keyword extraction; no language model was used; gemini unavailable (GEMINI_API_KEY not set); ashna unavailable (ASHNA_API_KEY not set)",
+      "extraction": {
+        "tier": "open_graph",
+        "signal": "weak",
+        "media_kind": "unknown",
+        "degraded": false,
+        "word_count": 19,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "oembed + og/html"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 15,
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/swift/comments/18j1382/how_are_you_structuring_your_swiftui_apps_in/",
+    "status_code": 200,
+    "latency_ms": 4173.7,
+    "outcome": "FAIL",
+    "details_count": 0,
+    "tags_count": 0,
+    "extracted_word_count": 0,
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/swift/comments/18j1382/",
+      "url_hash": "5322ae1b7550ec1c91d8d162da2280705d757a5b6a8dcdd079ebfec5c4b9b06a",
+      "title": null,
+      "summary": "No description available",
+      "description": "",
+      "details": [],
+      "tags": [],
+      "category": "other",
+      "content_type": "other",
+      "entities": {
+        "people": [],
+        "organizations": [],
+        "places": [],
+        "products": []
+      },
+      "language": "en",
+      "mode": "heuristic",
+      "provider": "heuristic",
+      "model": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost_usd": 0.0,
+      "duration_ms": 0,
+      "degraded": true,
+      "note": "keyword extraction; no language model was used; gemini unavailable (GEMINI_API_KEY not set); ashna unavailable (ASHNA_API_KEY not set)",
+      "extraction": {
+        "tier": "degraded",
+        "signal": "none",
+        "media_kind": "unknown",
+        "degraded": true,
+        "word_count": 0,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "all tiers failed; URL retained for reprocessing"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 16,
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/technology/comments/18q9wke/eu_passes_landmark_artificial_intelligence_act/",
+    "status_code": 200,
+    "latency_ms": 3560.44,
+    "outcome": "FAIL",
+    "details_count": 0,
+    "tags_count": 0,
+    "extracted_word_count": 0,
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/technology/comments/18q9wke/",
+      "url_hash": "4d0256f5eeb813398ec7ecfe3455ec31c506bfd236f040e27fa8d86b5633c14d",
+      "title": null,
+      "summary": "No description available",
+      "description": "",
+      "details": [],
+      "tags": [],
+      "category": "other",
+      "content_type": "other",
+      "entities": {
+        "people": [],
+        "organizations": [],
+        "places": [],
+        "products": []
+      },
+      "language": "en",
+      "mode": "heuristic",
+      "provider": "heuristic",
+      "model": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost_usd": 0.0,
+      "duration_ms": 0,
+      "degraded": true,
+      "note": "keyword extraction; no language model was used; gemini unavailable (GEMINI_API_KEY not set); ashna unavailable (ASHNA_API_KEY not set)",
+      "extraction": {
+        "tier": "degraded",
+        "signal": "none",
+        "media_kind": "unknown",
+        "degraded": true,
+        "word_count": 0,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "all tiers failed; URL retained for reprocessing"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 17,
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/programming/comments/17b2pkn/sqlite_is_35_faster_than_the_filesystem/",
+    "status_code": 200,
+    "latency_ms": 1.3,
+    "outcome": "PASS",
+    "details_count": 0,
+    "tags_count": 4,
+    "extracted_word_count": 5,
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/programming/comments/17b2pkn/",
+      "url_hash": "5e7cf0658efd3554c3097184db8f874ecda59f676c62997aa75dddc630b5976f",
+      "title": "Spun",
+      "summary": "Spun by in Pnpgay",
+      "description": "title: Spun caption: Spun by in Pnpgay",
+      "details": [],
+      "tags": [
+        "spun",
+        "pnpgay",
+        "title",
+        "caption"
+      ],
+      "category": "other",
+      "content_type": "other",
+      "entities": {
+        "people": [],
+        "organizations": [
+          "Spun",
+          "Pnpgay"
+        ],
+        "places": [],
+        "products": []
+      },
+      "language": "en",
+      "mode": "heuristic",
+      "provider": "heuristic",
+      "model": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost_usd": 0.0,
+      "duration_ms": 0,
+      "degraded": true,
+      "note": "keyword extraction; no language model was used; gemini unavailable (GEMINI_API_KEY not set); ashna unavailable (ASHNA_API_KEY not set)",
+      "extraction": {
+        "tier": "open_graph",
+        "signal": "weak",
+        "media_kind": "unknown",
+        "degraded": false,
+        "word_count": 5,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "oembed + og/html"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 18,
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/apple/comments/188045v/m3_max_macbook_pro_one_month_later/",
+    "status_code": 200,
+    "latency_ms": 1.64,
+    "outcome": "PASS",
+    "details_count": 0,
+    "tags_count": 8,
+    "extracted_word_count": 15,
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/apple/comments/188045v/",
+      "url_hash": "435cf2f2ce8d8e0a54588d214fd21e6e7fc34ac7d71d658b61ae437178666e42",
+      "title": "Supreme BOGO Week In Store",
+      "summary": "Supreme BOGO Week In Store",
+      "description": "Supreme BOGO Week In Store by u/BeastieBoyzz in Supreme",
+      "details": [],
+      "tags": [
+        "supreme",
+        "bogo",
+        "week",
+        "store",
+        "beastieboyzz",
+        "title",
+        "author",
+        "caption"
+      ],
+      "category": "other",
+      "content_type": "other",
+      "entities": {
+        "people": [
+          "BeastieBoyzz"
+        ],
+        "organizations": [
+          "Supreme"
+        ],
+        "places": [],
+        "products": [
+          "Week In Store"
+        ]
+      },
+      "language": "en",
+      "mode": "heuristic",
+      "provider": "heuristic",
+      "model": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost_usd": 0.0,
+      "duration_ms": 0,
+      "degraded": true,
+      "note": "keyword extraction; no language model was used; gemini unavailable (GEMINI_API_KEY not set); ashna unavailable (ASHNA_API_KEY not set)",
+      "extraction": {
+        "tier": "open_graph",
+        "signal": "weak",
+        "media_kind": "unknown",
+        "degraded": false,
+        "word_count": 15,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "oembed + og/html"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 19,
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/webdev/comments/18t9q41/what_backend_framework_do_you_enjoy_the_most/",
+    "status_code": 200,
+    "latency_ms": 1.83,
+    "outcome": "PASS",
+    "details_count": 0,
+    "tags_count": 7,
+    "extracted_word_count": 19,
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/webdev/comments/18t9q41/",
+      "url_hash": "96affed516deffc1f7606546f4128deb57d72f8c23e6a5b5adcaab334614dcfa",
+      "title": "My most funny, favorite moments in Lethal Company",
+      "summary": "My most funny, favorite moments in Lethal Company",
+      "description": "My most funny, favorite moments in Lethal Company by in lethalcompany",
+      "details": [],
+      "tags": [
+        "favorite",
+        "moment",
+        "lethal",
+        "company",
+        "lethalcompany",
+        "title",
+        "caption"
+      ],
+      "category": "other",
+      "content_type": "other",
+      "entities": {
+        "people": [],
+        "organizations": [],
+        "places": [],
+        "products": [
+          "Lethal Company"
+        ]
+      },
+      "language": "en",
+      "mode": "heuristic",
+      "provider": "heuristic",
+      "model": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost_usd": 0.0,
+      "duration_ms": 0,
+      "degraded": true,
+      "note": "keyword extraction; no language model was used; gemini unavailable (GEMINI_API_KEY not set); ashna unavailable (ASHNA_API_KEY not set)",
+      "extraction": {
+        "tier": "open_graph",
+        "signal": "weak",
+        "media_kind": "unknown",
+        "degraded": false,
+        "word_count": 19,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "oembed"
+      },
+      "embedding": null
+    }
+  },
+  {
+    "index": 20,
+    "platform": "reddit",
+    "url": "https://www.reddit.com/r/apple/comments/19f3e49/apple_announces_changes_to_ios_safari_and_the_app/",
+    "status_code": 200,
+    "latency_ms": 1.16,
+    "outcome": "PASS",
+    "details_count": 0,
+    "tags_count": 8,
+    "extracted_word_count": 19,
+    "error_notes": null,
+    "response_payload": {
+      "url": "https://reddit.com/r/apple/comments/19f3e49/",
+      "url_hash": "9aeab93d62e5eab46ee852e936ce2611f2a1a132b8385d47b3fea9a38cbbc410",
+      "title": "embarrassing reminder of what happened at camp",
+      "summary": "embarrassing reminder of what happened at camp",
+      "description": "embarrassing reminder of what happened at camp by u/Jumpy-Sympathy9026 in u_Jumpy-Sympathy9026",
+      "details": [],
+      "tags": [
+        "embarrassing",
+        "reminder",
+        "happened",
+        "camp",
+        "jumpy-sympathy9026",
+        "title",
+        "author",
+        "caption"
+      ],
+      "category": "other",
+      "content_type": "other",
+      "entities": {
+        "people": [
+          "Jumpy-Sympathy9026"
+        ],
+        "organizations": [
+          "Jumpy",
+          "Sympathy9026"
+        ],
+        "places": [],
+        "products": []
+      },
+      "language": "en",
+      "mode": "heuristic",
+      "provider": "heuristic",
+      "model": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost_usd": 0.0,
+      "duration_ms": 0,
+      "degraded": true,
+      "note": "keyword extraction; no language model was used; gemini unavailable (GEMINI_API_KEY not set); ashna unavailable (ASHNA_API_KEY not set)",
+      "extraction": {
+        "tier": "open_graph",
+        "signal": "weak",
+        "media_kind": "unknown",
+        "degraded": false,
+        "word_count": 19,
+        "duration_s": null,
+        "has_transcript": false,
+        "note": "oembed"
+      },
+      "embedding": null
+    }
+  }
+]

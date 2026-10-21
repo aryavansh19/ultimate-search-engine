@@ -1,0 +1,159 @@
+version: "1.0"
+description: "Taxonomy of realistic bookmark and ingestion targets for LinQ iOS app"
+
+default_target_per_type: 25
+
+genres:
+  - id: technology
+    name: "Technology"
+  - id: ai_ml
+    name: "AI & Machine Learning"
+  - id: developer
+    name: "Developer & Engineering"
+  - id: science
+    name: "Science & Physics"
+  - id: education
+    name: "Education & Learning"
+  - id: business
+    name: "Business & Startups"
+  - id: finance
+    name: "Finance & Investing"
+  - id: news
+    name: "News & Current Affairs"
+  - id: entertainment
+    name: "Entertainment & Media"
+  - id: food
+    name: "Food & Recipes"
+  - id: travel
+    name: "Travel & Exploration"
+  - id: health
+    name: "Health & Medicine"
+  - id: design
+    name: "Design & UX"
+  - id: culture
+    name: "Culture & Society"
+  - id: productivity
+    name: "Productivity"
+  - id: sports
+    name: "Sports"
+
+platforms:
+  youtube:
+    name: "YouTube"
+    domain_patterns: ["youtube.com", "youtu.be", "m.youtube.com"]
+    page_types:
+      youtube_video:
+        name: "YouTube Video"
+        url_patterns: [".*youtube\\.com/watch\\?v=.*", ".*youtu\\.be/.*"]
+        allowed_sources: ["youtube_api", "curated_feed", "common_crawl"]
+        target_count: 25
+      youtube_short:
+        name: "YouTube Short"
+        url_patterns: [".*youtube\\.com/shorts/.*"]
+        allowed_sources: ["youtube_api", "curated_feed"]
+        target_count: 25
+      youtube_channel:
+        name: "YouTube Channel"
+        url_patterns: [".*youtube\\.com/@.*", ".*youtube\\.com/c/.*", ".*youtube\\.com/channel/.*"]
+        allowed_sources: ["youtube_api", "curated_feed"]
+        target_count: 25
+
+  instagram:
+    name: "Instagram"
+    domain_patterns: ["instagram.com"]
+    page_types:
+      instagram_reel:
+        name: "Instagram Reel"
+        url_patterns: [".*instagram\\.com/reel/.*"]
+        allowed_sources: ["curated_feed", "platform_search"]
+        target_count: 25
+
+  github:
+    name: "GitHub"
+    domain_patterns: ["github.com"]
+    page_types:
+      github_issue:
+        name: "GitHub Issue"
+        url_patterns: [".*github\\.com/[^/]+/[^/]+/issues/\\d+.*"]
+        allowed_sources: ["github_api"]
+        target_count: 25
+      github_repository:
+        name: "GitHub Repository"
+        url_patterns: [".*github\\.com/[^/]+/[^/]+/?$"]
+        allowed_sources: ["github_api", "hackernews"]
+        target_count: 25
+
+  news:
+    name: "News Media"
+    domain_patterns: ["bbc.com", "theverge.com", "techcrunch.com", "reuters.com", "nytimes.com", "theguardian.com", "arstechnica.com", "hamatti.org", "cabel.com", "wired.com"]
+    page_types:
+      news_article:
+        name: "News Article"
+        url_patterns: [".*"]
+        allowed_sources: ["hackernews", "rss_feed", "curated_feed"]
+        target_count: 25
+
+  wikipedia:
+    name: "Wikipedia"
+    domain_patterns: ["wikipedia.org", "*.wikipedia.org"]
+    page_types:
+      wikipedia_article:
+        name: "Wikipedia Article"
+        url_patterns: [".*wikipedia\\.org/wiki/.*"]
+        allowed_sources: ["wikimedia_api"]
+        target_count: 25
+
+  arxiv:
+    name: "arXiv"
+    domain_patterns: ["arxiv.org"]
+    page_types:
+      arxiv_paper:
+        name: "arXiv Research Paper"
+        url_patterns: [".*arxiv\\.org/abs/.*"]
+        allowed_sources: ["arxiv_api"]
+        target_count: 25
+
+  developer_docs:
+    name: "Developer Documentation"
+    domain_patterns: ["developer.apple.com", "developer.mozilla.org"]
+    page_types:
+      apple_developer_doc:
+        name: "Apple Developer Documentation"
+        url_patterns: [".*developer\\.apple\\.com/documentation/.*"]
+        allowed_sources: ["curated_feed", "common_crawl"]
+        target_count: 25
+      mdn_doc:
+        name: "MDN Web Docs"
+        url_patterns: [".*developer\\.mozilla\\.org/.*"]
+        allowed_sources: ["curated_feed", "common_crawl"]
+        target_count: 25
+
+  recipes:
+    name: "Food & Recipes"
+    domain_patterns: ["bbcgoodfood.com", "seriouseats.com", "allrecipes.com"]
+    page_types:
+      recipe_page:
+        name: "Culinary Recipe"
+        url_patterns: [".*bbcgoodfood\\.com/recipes/.*", ".*seriouseats\\.com/.*"]
+        allowed_sources: ["curated_feed", "common_crawl"]
+        target_count: 25
+
+  travel:
+    name: "Travel Guides"
+    domain_patterns: ["lonelyplanet.com", "nomadicmatt.com"]
+    page_types:
+      travel_guide:
+        name: "Travel Guide"
+        url_patterns: [".*lonelyplanet\\.com/.*", ".*nomadicmatt\\.com/.*"]
+        allowed_sources: ["curated_feed", "common_crawl"]
+        target_count: 25
+
+  saas_product:
+    name: "SaaS & Products"
+    domain_patterns: ["stripe.com", "supabase.com", "vercel.com", "linear.app", "figma.com", "notion.so", "raycast.com", "postman.com", "sentry.io", "cloudflare.com", "resend.com", "render.com", "prisma.io", "neon.tech", "clerk.com", "inngest.com", "tailwindcss.com", "retool.com"]
+    page_types:
+      saas_product_page:
+        name: "SaaS Product / Landing Page"
+        url_patterns: [".*"]
+        allowed_sources: ["hackernews", "curated_feed"]
+        target_count: 25

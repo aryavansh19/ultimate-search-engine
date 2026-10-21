@@ -31,6 +31,7 @@ from enrichment import Enricher, EnrichmentConfig
 from enrichment.schema import Enrichment, EnrichmentMode
 from extractor import ExtractionCascade, ExtractorConfig
 from extractor.envelope import ContentEnvelope
+from quota import embedder_governor, gemini_governor
 from search import SearchConfig
 from search.chunking import chunk_document
 from search.embedder import BaseEmbedder, EmbedderError, EmbedderUnavailable, build_embedder
@@ -116,6 +117,10 @@ class AnalysisService:
                 "available": vector_ok,
                 "reason": vector_reason,
                 "query_cache_hits": self.embedder.query_cache_hits,
+            },
+            "quota": {
+                "gemini": gemini_governor.telemetry().to_dict(),
+                "embedder": embedder_governor.telemetry().to_dict(),
             },
         }
 

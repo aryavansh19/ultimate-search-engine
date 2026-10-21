@@ -21,3 +21,7 @@ build/
 # System files
 .DS_Store
 Thumbs.db
+
+# Runtime logs
+logs/
+*.log

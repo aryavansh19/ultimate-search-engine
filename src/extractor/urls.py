@@ -116,16 +116,13 @@ def resolve_redirects(url: str, timeout: float = 10.0) -> str:
     request resolving a URL that is already canonical.
     """
     try:
-        with httpx.Client(
-            follow_redirects=True,
-            timeout=timeout,
-            headers={"User-Agent": _BROWSER_UA},
-        ) as client:
-            # HEAD first; several shorteners answer it and it saves the body.
-            response = client.head(url)
-            if response.status_code >= 400 or not response.url:
-                response = client.get(url)
-            return str(response.url)
+        from .http_client import get_shared_client
+
+        client = get_shared_client()
+        response = client.head(url, timeout=timeout)
+        if response.status_code >= 400 or not response.url:
+            response = client.get(url, timeout=timeout)
+        return str(response.url)
     except Exception:
         return url
 

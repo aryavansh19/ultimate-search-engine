@@ -33,6 +33,8 @@ from typing import Any
 
 import httpx
 
+from quota import gemini_governor
+
 from extractor import ContentEnvelope
 
 from ..pricing import estimate_cost, estimate_video_tokens, is_priced
@@ -49,6 +51,16 @@ _RETRY_STATUSES = {429, 500, 502, 504}
 # 404 means the model name is retired for this key; 503 means it is overloaded. Both are
 # answered by switching models, not by retrying the same one.
 _MODEL_UNAVAILABLE_STATUSES = {404, 503}
+
+
+def _parse_retry_after(response: httpx.Response) -> float | None:
+    raw = response.headers.get("retry-after")
+    if not raw:
+        return None
+    try:
+        return max(1.0, min(float(raw), 120.0))
+    except ValueError:
+        return None
 
 
 class ModelUnavailable(ProviderError):
@@ -292,14 +304,30 @@ class GeminiProvider(EnrichmentProvider):
         last_error: str = "unknown"
         transport_only = True
         for attempt in range(max(1, attempts)):
+            # Adaptive rate pacing: self-throttles before dispatching to prevent 429
+            gemini_governor.acquire()
             try:
                 with httpx.Client(timeout=self.config.request_timeout) as client:
                     response = client.post(url, json=payload, headers=headers)
                 if response.status_code == 200:
-                    return response.json()
+                    data = response.json()
+                    usage = data.get("usageMetadata", {})
+                    tokens = int(usage.get("totalTokenCount") or 0)
+                    gemini_governor.record_success(actual_tokens=tokens)
+                    return data
                 body = " ".join(response.text.split())[:240]
                 last_error = f"HTTP {response.status_code}: {body}"
                 transport_only = False
+                if response.status_code == 429:
+                    retry_after = _parse_retry_after(response)
+                    cooldown = gemini_governor.record_error(
+                        status_code=429, retry_after=retry_after, error_body=body
+                    )
+                    delay = retry_after or cooldown or (1.5 * (attempt + 1))
+                else:
+                    gemini_governor.record_error(status_code=response.status_code)
+                    delay = 1.5 * (attempt + 1)
+
                 if response.status_code in _MODEL_UNAVAILABLE_STATUSES:
                     # A retired or overloaded model. Retrying the same name will not
                     # help; the caller should try a different model.
@@ -308,9 +336,11 @@ class GeminiProvider(EnrichmentProvider):
                     break
             except httpx.HTTPError as exc:
                 last_error = f"{type(exc).__name__}: {exc}"
+                gemini_governor.record_error(status_code=500)
+                delay = 1.5 * (attempt + 1)
             # Rate limits and 5xx are worth a short backoff; anything else is not.
             if attempt < attempts - 1:
-                time.sleep(1.5 * (attempt + 1))
+                time.sleep(delay)
 
         message = _redact(last_error, self.config.api_key)
         if transport_only:

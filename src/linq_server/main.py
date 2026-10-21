@@ -30,6 +30,8 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from quota import get_all_telemetry
+
 from .auth import AccessPolicy
 from .diagnostics import (
     analyze_request_payload,
@@ -135,6 +137,7 @@ def health() -> dict[str, Any]:
             "payload_logging": payload_logging_enabled(),
             "logger_level": logging.getLevelName(logging.getLogger("linq").level),
         },
+        "quota_telemetry": get_all_telemetry(),
     }
     if service is not None:
         payload["capabilities"] = service.capabilities()
