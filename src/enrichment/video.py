@@ -100,7 +100,7 @@ def compress_video(
             "-t", str(int(max_seconds)),
             # `fps` before `scale` so scaling only runs on frames that survive.
             "-vf", f"fps={fps},scale=-2:{height}",
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", str(crf),
+            "-c:v", "libx264", "-preset", "ultrafast", "-threads", "2", "-crf", str(crf),
             "-pix_fmt", "yuv420p",
             "-c:a", "aac", "-b:a", audio_bitrate, "-ac", "1",
             "-movflags", "+faststart",

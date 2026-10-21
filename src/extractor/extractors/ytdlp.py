@@ -448,9 +448,12 @@ def _pick_media_url(entry: dict[str, Any]) -> str | None:
         if fmt.get("vcodec") in (None, "none"):
             continue
 
-        score = int(fmt.get("height") or 0)
+        height = int(fmt.get("height") or 0)
+        # Optimal resolution for vision LLM sampling is 480p-720p. 1080p/4K adds 10x network bloat
+        # without any vision recall improvement. Penalize resolution distance from 540p.
+        score = 10_000 - abs(height - 540)
         if fmt.get("acodec") not in (None, "none"):
-            score += 10_000  # muxed audio+video beats a video-only stream
+            score += 20_000  # muxed audio+video beats video-only
         if fmt.get("ext") == "mp4":
             score += 1_000
         if score > best_score:

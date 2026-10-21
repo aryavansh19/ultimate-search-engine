@@ -41,7 +41,7 @@ _FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "thumbnail_url": (
         "thumbnail_url", "thumbnail", "display_url", "image_url", "cover", "cover_url",
     ),
-    "media_url": ("media_url", "video_url", "play_url", "download_url", "src"),
+    "media_url": ("media_url", "video_url", "play_url", "download_url", "src", "url"),
     "transcript": ("transcript", "captions_text", "subtitles_text", "audio_transcript"),
     "ocr_text": ("ocr_text", "ocr", "text_in_image", "onscreen_text"),
     "article_text": ("article_text", "content", "body", "main_text", "markdown"),
