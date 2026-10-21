@@ -67,10 +67,11 @@ _INSTAGRAM_EMBED_UA = (
 # server-side returns 200 with an 8 KB shell whose only metadata is `<title>Reddit`.
 _JUNK_TITLES = {
     "reddit", "instagram", "tiktok", "x", "twitter", "linkedin", "facebook",
-    "youtube", "login", "log in", "sign in", "just a moment...", "access denied",
-    "attention required!", "are you a robot?", "robot check", "security check",
-    "page not found", "error", "forbidden", "captcha", "bot verification",
-    "verify you are human", "one moment, please...",
+    "youtube", "login", "log in", "sign in", "just a moment", "just a moment...",
+    "access denied", "attention required!", "are you a robot?", "robot check",
+    "security check", "page not found", "error", "forbidden", "captcha",
+    "bot verification", "verify you are human", "one moment, please",
+    "one moment, please...",
 }
 
 _BLOCK_MARKERS = (
