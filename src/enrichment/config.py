@@ -137,7 +137,7 @@ class EnrichmentConfig:
     compat_model: str = "gemini-2.5-Flash"
     # Generous by necessity: at 400 the gateway returned HTTP 200 with empty content,
     # having spent the entire budget on reasoning tokens.
-    compat_max_tokens: int = 3000
+    compat_max_tokens: int = 4096
 
     @property
     def has_api_key(self) -> bool:
@@ -191,5 +191,5 @@ class EnrichmentConfig:
                 or os.getenv("COMPAT_MODEL")
                 or "gemini-2.5-Flash"
             ),
-            compat_max_tokens=_int("COMPAT_MAX_TOKENS", 3000),
+            compat_max_tokens=_int("COMPAT_MAX_TOKENS", 4096),
         )

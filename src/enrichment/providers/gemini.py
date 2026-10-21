@@ -281,7 +281,7 @@ class GeminiProvider(EnrichmentProvider):
             "responseMimeType": "application/json",
             "responseSchema": RESPONSE_SCHEMA,
             "temperature": 0.2,
-            "maxOutputTokens": 2048,
+            "maxOutputTokens": 4096,
         }
         if mode is EnrichmentMode.MEDIA:
             generation["mediaResolution"] = (

@@ -177,25 +177,21 @@ RESPONSE_SCHEMA: dict[str, Any] = {
         "description": {
             "type": "string",
             "description": (
-                "Two or three sentences covering the specifics someone would use to "
-                "find this again later: concrete steps, named things, numbers, "
-                "outcomes. Avoid generic praise."
+                "3 to 6 densely informative sentences covering the deep specifics someone would use to "
+                "find this again later: concrete steps, mechanics, named entities, numbers, and key takeaways. "
+                "Avoid meta-introductory phrases or generic praise."
             ),
         },
         "details": _string_array(
-            "Exhaustive list of individually memorable moments. Each entry must describe "
-            "an ACTION with its object, not just name the object: write 'pours baking "
-            "soda into his penny loafers' rather than 'baking soda'; 'straps an Apple "
-            "Watch to his calf' rather than 'Apple Watch'. Include what is done, where "
-            "it is placed, and any on-screen text, numbers, brands or spoken claims. "
-            "Be complete rather than tidy -- someone will search for exactly the small "
-            "thing you leave out, and they will remember the action, not the prop.",
-            30,
+            "Exhaustive list of individually memorable moments and actions (15 to 35 items). Each entry must describe "
+            "an ACTION with its object: write 'pours baking soda into penny loafers' rather than 'baking soda'. "
+            "Include visible text, numbers, brands, spoken quotes, and background elements. Be complete rather than tidy.",
+            40,
         ),
         "tags": _string_array(
-            "5 to 15 lowercase topical keywords. Prefer specific over generic "
-            "('orecchiette' over 'food'). Exclude reach-bait like 'viral' or 'fyp'.",
-            15,
+            "10 to 25 lowercase topical keywords and synonyms. Prefer specific over generic. "
+            "Include technical terms and colloquial intent words. Exclude reach-bait like 'viral' or 'fyp'.",
+            25,
         ),
         "category": {
             "type": "string",
@@ -207,10 +203,10 @@ RESPONSE_SCHEMA: dict[str, Any] = {
             "description": "What kind of content this is, regardless of subject.",
             "enum": list(CONTENT_TYPES),
         },
-        "people": _string_array("Named individuals or handles appearing.", 8),
-        "organizations": _string_array("Named brands, companies or publications.", 8),
-        "places": _string_array("Named locations.", 8),
-        "products": _string_array("Named products, tools, models or libraries.", 10),
+        "people": _string_array("Named individuals or handles appearing.", 10),
+        "organizations": _string_array("Named brands, companies or publications.", 10),
+        "places": _string_array("Named locations.", 10),
+        "products": _string_array("Named products, tools, models or libraries.", 15),
         "language": {
             "type": "string",
             "description": "BCP-47 primary language of the content, e.g. 'en', 'hi'.",
