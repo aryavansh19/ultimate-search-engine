@@ -34,9 +34,10 @@ class AnalyzeRequest(BaseModel):
     media_url: str | None = None
     duration_s: float | None = None
 
-    # Full rendered DOM from a session-bearing WKWebView, if the app ever captures one.
-    # This is the highest-quality input available and beats every server-side tier.
+    # Full rendered DOM or plain innerText from a session-bearing WKWebView.
+    # Passing on-device extracted text beats every server-side scraper and bypasses Cloudflare/CAPTCHAs.
     html: str | None = None
+    article_text: str | None = None
 
     force_media: bool = Field(
         default=False,
@@ -52,15 +53,14 @@ class AnalyzeRequest(BaseModel):
     def has_substantial_content(self) -> bool:
         """Whether the client actually captured content, as opposed to just a label.
 
-        A title and a hostname are not content. A real page description is content: on
-        session-gated sites such as Instagram it is often the only useful text the signed-in
-        iPhone can hand to a server running from a datacenter. This distinction decides
-        whether the client-payload tier is allowed to win the extraction cascade — see
-        ``client_payload``.
+        A title and a hostname are not content. A real page description or rendered article
+        text is content: on session-gated or CAPTCHA-protected sites such as DexScreener,
+        Instagram, or G2, it is often the only useful text the signed-in iPhone can hand to
+        a server running from a datacenter.
         """
         return any(
             isinstance(value, str) and bool(value.strip())
-            for value in (self.html, self.caption, self.description, self.media_url)
+            for value in (self.html, self.article_text, self.caption, self.description, self.media_url)
         )
 
     def client_payload(self) -> dict[str, Any]:
@@ -68,22 +68,6 @@ class AnalyzeRequest(BaseModel):
 
         **Returns empty unless the client captured real content**, and that is the whole
         point of this method.
-
-        The cascade normally stops at the first tier whose envelope has any text signal
-        (`signal is not NONE`, which is five prose words). A payload of just
-        `{"title": "How I trained for a marathon", "author": "youtube.com"}` clears that bar
-        — so passing it made the client-payload tier win instantly, yt-dlp never ran, no
-        `media_url` was ever discovered, `needs_media_understanding` was therefore False, and
-        `decide_mode` returned METADATA. Net effect: the video was never looked at, and the
-        model described the link from its title alone. Silently, and for almost every
-        bookmark, since most titles are five words or more.
-
-        So thin metadata is withheld deliberately. The server's own tiers recover the title
-        anyway, and `merged_with` fills any gaps a later tier leaves. When the app does
-        capture something real — rendered DOM from a session-bearing webview, a caption or
-        page description, a direct media URL — it becomes a trusted fallback. Weak video
-        metadata is retained while the cascade continues to yt-dlp for richer media;
-        stronger client content can still finish the cascade immediately.
         """
         if not self.has_substantial_content():
             return {}
@@ -105,6 +89,8 @@ class AnalyzeRequest(BaseModel):
         }
         if self.html:
             payload["html"] = self.html
+        if self.article_text:
+            payload["article_text"] = self.article_text
         if self.keywords:
             payload["tags"] = list(self.keywords)
         if self.duration_s is not None:

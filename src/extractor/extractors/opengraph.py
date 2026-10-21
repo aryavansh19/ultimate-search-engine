@@ -485,6 +485,8 @@ class OpenGraphExtractor(Extractor):
             # Refuse to fetch internal addresses on behalf of a caller-supplied URL.
             return {}
 
+        html = ""
+        final_url = target.canonical_url
         try:
             client = get_shared_client()
             response = client.get(
@@ -496,20 +498,37 @@ class OpenGraphExtractor(Extractor):
                 },
                 timeout=self.config.http_timeout,
             )
-            if response.status_code >= 400:
-                return {}
-            content_type = response.headers.get("content-type", "")
-            if "html" not in content_type and "xml" not in content_type:
-                return {}
-            html = response.text[:_MAX_BYTES]
-            final_url = str(response.url)
+            if response.status_code < 400:
+                content_type = response.headers.get("content-type", "")
+                if "html" in content_type or "xml" in content_type:
+                    html = response.text[:_MAX_BYTES]
+                    final_url = str(response.url)
         except Exception:
-            return {}
+            pass
 
-        meta = parse_meta(html, base_url=final_url)
-        if _looks_blocked(html, to_str(meta.get("title"))):
-            # Report nothing rather than a bot wall's title. The cascade then records
-            # this tier as a genuine failure, which is what you want to see in stats.
+        meta = parse_meta(html, base_url=final_url) if html else {}
+        blocked = not html or _looks_blocked(html, to_str(meta.get("title")))
+
+        # Stage 1 anti-bot rescue: Chrome TLS/JA3 impersonation via curl_cffi
+        if blocked:
+            html_curl = self._fetch_via_curl_cffi(target.canonical_url)
+            if html_curl:
+                meta_curl = parse_meta(html_curl, base_url=target.canonical_url)
+                if not _looks_blocked(html_curl, to_str(meta_curl.get("title"))):
+                    html = html_curl
+                    final_url = target.canonical_url
+                    meta = meta_curl
+                    blocked = False
+
+        # Stage 2 anti-bot rescue: Stealth headless reader proxy with DOM wait selector
+        if blocked:
+            reader_data = self._from_reader_proxy(target.canonical_url)
+            if reader_data and reader_data.get("article_text"):
+                return {
+                    "title": reader_data.get("title"),
+                    "caption": reader_data.get("caption"),
+                    "article_text": reader_data.get("article_text"),
+                }
             return {}
 
         fields: dict[str, Any] = {
@@ -548,6 +567,32 @@ class OpenGraphExtractor(Extractor):
 
         return fields
 
+    def _fetch_via_curl_cffi(self, url: str) -> str | None:
+        """Bypass TLS/JA3 bot blocks by impersonating a real Chrome browser."""
+        try:
+            from curl_cffi import requests as curl_requests
+
+            headers = {
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+                ),
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Upgrade-Insecure-Requests": "1",
+            }
+            r = curl_requests.get(
+                url,
+                impersonate="chrome124",
+                headers=headers,
+                timeout=int(self.config.http_timeout),
+            )
+            if r.status_code == 200 and r.text:
+                return r.text[:_MAX_BYTES]
+        except Exception:
+            pass
+        return None
+
     def _from_reader_proxy(self, url: str) -> dict[str, Any] | None:
         """Fetch rendered DOM content via high-fidelity headless reader proxy (Jina Reader)."""
         try:
@@ -560,8 +605,9 @@ class OpenGraphExtractor(Extractor):
                     headers={
                         "Accept": "application/json",
                         "User-Agent": self.config.user_agent,
+                        "X-Wait-For-Selector": "body",
                     },
-                    timeout=12.0,
+                    timeout=14.0,
                 )
                 if resp.status_code == 200:
                     data = resp.json().get("data", {})
