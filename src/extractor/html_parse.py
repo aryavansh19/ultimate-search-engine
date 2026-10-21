@@ -198,16 +198,29 @@ def _coerce_duration(value: Any) -> float | None:
 
 
 def extract_article_text(html: str, max_chars: int = 20_000) -> str | None:
-    """Rough main-content extraction: strip chrome, then take the best-scoring block.
+    """Extract main readable content using trafilatura with heuristic fallback.
 
-    Candidates are scored on prose length discounted by link density, which is the
-    one readability heuristic worth having: navigation sidebars, tag clouds and
-    related-post rails are long but almost entirely anchor text, and a pure
-    length score happily picks them over the actual article. Wikipedia is the
-    clearest case -- its navboxes beat the body on raw character count.
-
-    Good enough for blogs and news. Swap in trafilatura when it isn't.
+    Trafilatura strips boilerplates, navigation, and advertisement chrome with high
+    precision. If unavailable or producing insufficient text, falls back to the
+    link-density container scoring heuristic.
     """
+    try:
+        import trafilatura
+
+        traf_text = trafilatura.extract(
+            html,
+            include_links=False,
+            include_comments=False,
+            include_tables=True,
+            no_fallback=False,
+        )
+        if traf_text and len(traf_text.strip()) >= 80:
+            cleaned = clean_text(traf_text)
+            if cleaned:
+                return cleaned[:max_chars]
+    except Exception:
+        pass
+
     soup = BeautifulSoup(html, "html.parser")
     for tag_name in _NOISE_TAGS:
         for tag in soup.find_all(tag_name):

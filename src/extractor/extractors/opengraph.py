@@ -527,6 +527,18 @@ class OpenGraphExtractor(Extractor):
         article = meta.get("article_text") or extract_article_text(
             html, self.config.max_article_chars
         )
+
+        # Fallback to headless reader proxy for pure JavaScript SPAs
+        # where the body has no extracted prose or is an empty client mount root.
+        if (not article or len(article.strip()) < 80) and _looks_like_spa(html):
+            reader_data = self._from_reader_proxy(target.canonical_url)
+            if reader_data:
+                article = reader_data.get("article_text") or article
+                if not fields.get("title") and reader_data.get("title"):
+                    fields["title"] = reader_data["title"]
+                if not fields.get("caption") and reader_data.get("caption"):
+                    fields["caption"] = reader_data["caption"]
+
         if article:
             fields["article_text"] = article
 
@@ -535,6 +547,36 @@ class OpenGraphExtractor(Extractor):
             fields["platform_tags"] = tags
 
         return fields
+
+    def _from_reader_proxy(self, url: str) -> dict[str, Any] | None:
+        """Fetch rendered DOM content via high-fidelity headless reader proxy (Jina Reader)."""
+        try:
+            assert_public_url(url)
+            client = get_shared_client()
+            for candidate_url in ([url, f"{url}/"] if not url.endswith("/") else [url]):
+                reader_url = f"https://r.jina.ai/{candidate_url}"
+                resp = client.get(
+                    reader_url,
+                    headers={
+                        "Accept": "application/json",
+                        "User-Agent": self.config.user_agent,
+                    },
+                    timeout=12.0,
+                )
+                if resp.status_code == 200:
+                    data = resp.json().get("data", {})
+                    content = clean_text(to_str(data.get("content")))
+                    title = clean_text(to_str(data.get("title")))
+                    desc = clean_text(to_str(data.get("description")))
+                    if content and len(content.split()) >= 5:
+                        return {
+                            "article_text": content[: self.config.max_article_chars],
+                            "title": title or None,
+                            "caption": desc or None,
+                        }
+        except Exception:
+            pass
+        return None
 
 
 def _reddit_top_comments(listing: Any, limit: int = 5) -> list[str]:
@@ -617,3 +659,36 @@ def _parse_instagram_embed(html: str) -> dict[str, Any]:
         }
         return {key: value for key, value in fields.items() if value not in (None, "", [])}
     return {}
+
+
+def _looks_like_spa(html: str) -> bool:
+    """Detect whether an HTML document is a pure client-side SPA with minimal initial DOM."""
+    if not html:
+        return False
+    spa_markers = (
+        'id="root"',
+        'id="app"',
+        'id="__next"',
+        'id="render-target"',
+        'data-reactroot',
+        'ng-version',
+        'data-v-',
+        'class="todoapp"',
+    )
+    if any(marker in html for marker in spa_markers):
+        return True
+
+    body_match = re.search(r"<body[^>]*>(.*?)</body>", html, re.DOTALL | re.IGNORECASE)
+    if body_match:
+        body_content = body_match.group(1)
+        clean_body = re.sub(
+            r"<(script|style|noscript)[^>]*>.*?</\1>",
+            "",
+            body_content,
+            flags=re.DOTALL | re.IGNORECASE,
+        )
+        clean_body = re.sub(r"<[^>]+>", " ", clean_body)
+        if len(clean_body.split()) < 25 and ("<script" in body_content or "<script" in html):
+            return True
+    return False
+
