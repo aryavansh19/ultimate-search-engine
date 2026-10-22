@@ -25,12 +25,12 @@ from __future__ import annotations
 import logging
 import os
 import re
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 from enrichment import Enricher, EnrichmentConfig
 from enrichment.schema import Enrichment, EnrichmentMode
 from extractor import ExtractionCascade, ExtractorConfig
-from extractor.envelope import ContentEnvelope, ExtractionTier
+from extractor.envelope import ContentEnvelope
 from quota import embedder_governor, gemini_governor
 from search import SearchConfig
 from search.chunking import chunk_document
@@ -133,41 +133,12 @@ class AnalysisService:
             request.url,
             bool(request.client_payload()),
         )
-        cascade = self.cascade
-        force_fresh = False
-        if request.extractor_override:
-            override = request.extractor_override.lower().strip()
-            force_fresh = True
-            if override in {"cobalt", "managed_api"}:
-                disabled = set(self.extractor_config.disabled_tiers) | {ExtractionTier.YT_DLP, ExtractionTier.OPEN_GRAPH}
-                managed_cfg = self.extractor_config.managed_api
-                if not managed_cfg.enabled:
-                    managed_cfg = replace(managed_cfg, url="https://linq-cobalt.onrender.com/", method="POST")
-                custom_cfg = replace(
-                    self.extractor_config,
-                    disabled_tiers=disabled,
-                    managed_api=managed_cfg,
-                    http_timeout=35.0,
-                    tier_timeout=45.0,
-                )
-                cascade = ExtractionCascade(custom_cfg, cache=self.cascade.cache)
-            elif override in {"ytdlp", "yt_dlp"}:
-                disabled = set(self.extractor_config.disabled_tiers) | {ExtractionTier.MANAGED_API, ExtractionTier.OPEN_GRAPH}
-                custom_cfg = replace(
-                    self.extractor_config,
-                    disabled_tiers=disabled,
-                    http_timeout=35.0,
-                    tier_timeout=45.0,
-                )
-                cascade = ExtractionCascade(custom_cfg, cache=self.cascade.cache)
-
         # retry_degraded: a link that failed extraction earlier (Instagram blocking an
         # anonymous request, cookies not yet configured) must be tried again rather than
         # served from cache as a permanent failure. Successful extractions still hit cache.
-        result = cascade.extract(
+        result = self.cascade.extract(
             request.url,
             client_payload=request.client_payload(),
-            force=force_fresh,
             retry_degraded=True,
         )
         for attempt in result.attempts:
@@ -224,7 +195,7 @@ class AnalysisService:
 
         try:
             enrichment = self.enricher.enrich(
-                envelope, force=(force_fresh or request.force_media), mode=mode
+                envelope, force=request.force_media, mode=mode
             )
         except Exception as exc:  # noqa: BLE001
             # A failed enrichment must not lose the extraction. The client still gets the

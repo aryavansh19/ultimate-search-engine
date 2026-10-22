@@ -49,10 +49,6 @@ class AnalyzeRequest(BaseModel):
     embed: bool = Field(
         default=True, description="Also return vectors, so saving is one round trip."
     )
-    extractor_override: str | None = Field(
-        default=None,
-        description="Force a specific extractor tier (e.g. 'ytdlp' or 'cobalt') for benchmarking.",
-    )
 
     def has_substantial_content(self) -> bool:
         """Whether the client actually captured content, as opposed to just a label.
