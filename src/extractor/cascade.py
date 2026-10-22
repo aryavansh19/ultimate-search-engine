@@ -159,6 +159,7 @@ class ExtractionCascade:
                 extractor.tier is ExtractionTier.CLIENT_PAYLOAD
                 and envelope.signal is SignalStrength.WEAK
                 and envelope.needs_media_understanding
+                and not envelope.media_url
             )
             partial = envelope.signal is SignalStrength.NONE or client_video_fallback
             if client_video_fallback:
