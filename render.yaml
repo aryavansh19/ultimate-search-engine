@@ -36,6 +36,8 @@ services:
       # Prompted for during Blueprint setup; never committed.
       - key: GEMINI_API_KEY
         sync: false
+      - key: MANAGED_API_URL
+        value: "https://linq-cobalt.onrender.com/"
       # Render generates a random token; copy it from the Environment tab and send it
       # as "Authorization: Bearer <token>".
       - key: LINQ_API_TOKEN

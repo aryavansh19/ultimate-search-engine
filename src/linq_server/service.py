@@ -139,12 +139,26 @@ class AnalysisService:
             override = request.extractor_override.lower().strip()
             force_fresh = True
             if override in {"cobalt", "managed_api"}:
-                disabled = set(self.extractor_config.disabled_tiers) | {ExtractionTier.YT_DLP}
-                custom_cfg = replace(self.extractor_config, disabled_tiers=disabled)
+                disabled = set(self.extractor_config.disabled_tiers) | {ExtractionTier.YT_DLP, ExtractionTier.OPEN_GRAPH}
+                managed_cfg = self.extractor_config.managed_api
+                if not managed_cfg.enabled:
+                    managed_cfg = replace(managed_cfg, url="https://linq-cobalt.onrender.com/", method="POST")
+                custom_cfg = replace(
+                    self.extractor_config,
+                    disabled_tiers=disabled,
+                    managed_api=managed_cfg,
+                    http_timeout=35.0,
+                    tier_timeout=45.0,
+                )
                 cascade = ExtractionCascade(custom_cfg, cache=self.cascade.cache)
             elif override in {"ytdlp", "yt_dlp"}:
-                disabled = set(self.extractor_config.disabled_tiers) | {ExtractionTier.MANAGED_API}
-                custom_cfg = replace(self.extractor_config, disabled_tiers=disabled)
+                disabled = set(self.extractor_config.disabled_tiers) | {ExtractionTier.MANAGED_API, ExtractionTier.OPEN_GRAPH}
+                custom_cfg = replace(
+                    self.extractor_config,
+                    disabled_tiers=disabled,
+                    http_timeout=35.0,
+                    tier_timeout=45.0,
+                )
                 cascade = ExtractionCascade(custom_cfg, cache=self.cascade.cache)
 
         # retry_degraded: a link that failed extraction earlier (Instagram blocking an
