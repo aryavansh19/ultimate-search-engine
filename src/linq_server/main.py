@@ -33,13 +33,24 @@ from fastapi.responses import JSONResponse
 from quota import get_all_telemetry
 
 from .auth import AccessPolicy
+from .collections import (
+    CollectionLookupError,
+    GeminiCollectionSelector,
+    SupabaseCollectionCatalog,
+)
 from .diagnostics import (
     analyze_request_payload,
     configure_logging,
     log_json,
     payload_logging_enabled,
 )
-from .models import AnalyzeRequest, AnalyzeResponse, EmbedRequest, EmbedResponse
+from .models import (
+    AnalyzeRequest,
+    AnalyzeResponse,
+    CollectionSuggestion,
+    EmbedRequest,
+    EmbedResponse,
+)
 from .service import AnalysisService, ServiceError
 
 log = logging.getLogger("linq.main")
@@ -153,6 +164,13 @@ async def analyze(request: AnalyzeRequest, http: Request) -> AnalyzeResponse:
     """
     trace_id = getattr(http.state, "trace_id", "unknown")
     caller = policy.identify(http)
+    if request.suggest_collection and (
+        caller.kind != "supabase" or not caller.user_id or not caller.issuer
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Collection suggestions require a verified Supabase user and project.",
+        )
     policy.charge(caller)
     svc = _service()
     log.info(
@@ -171,8 +189,28 @@ async def analyze(request: AnalyzeRequest, http: Request) -> AnalyzeResponse:
         "1. request JSON (authorization and HTML excluded)",
         analyze_request_payload(request),
     )
+
+    def run_analysis() -> AnalyzeResponse:
+        result = svc.analyze(request, trace_id=trace_id)
+        if request.suggest_collection:
+            try:
+                catalog = SupabaseCollectionCatalog.from_env(policy.supabase.supabase_urls)
+                token = policy._bearer(http) or http.headers.get("x-access-token") or ""
+                choices = catalog.fetch(caller, token)
+                selector = GeminiCollectionSelector(svc.enrichment_config)
+                result.collection_suggestion = selector.select(result, choices)
+            except CollectionLookupError:
+                result.collection_suggestion = CollectionSuggestion(
+                    status="unavailable", reason="lookup_unavailable"
+                )
+            log.info(
+                "[search-pipeline:%s] collection suggestion status=%s",
+                trace_id, result.collection_suggestion.status,
+            )
+        return result
+
     try:
-        result = await run_in_threadpool(lambda: svc.analyze(request, trace_id=trace_id))
+        result = await run_in_threadpool(run_analysis)
     except Exception:  # noqa: BLE001
         log.exception("[search-pipeline:%s] analyze failed url=%s", trace_id, request.url)
         raise

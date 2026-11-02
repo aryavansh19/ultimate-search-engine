@@ -8,6 +8,7 @@ a direct counterpart in the LinQ SQLite schema.
 from __future__ import annotations
 
 from typing import Any, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -48,6 +49,10 @@ class AnalyzeRequest(BaseModel):
     )
     embed: bool = Field(
         default=True, description="Also return vectors, so saving is one round trip."
+    )
+    suggest_collection: bool = Field(
+        default=False,
+        description="Suggest one existing collection for the authenticated user. Never creates or assigns collections.",
     )
 
     def has_substantial_content(self) -> bool:
@@ -139,6 +144,21 @@ class ExtractionInfo(BaseModel):
     note: str | None = None
 
 
+class CollectionSuggestion(BaseModel):
+    """A user-specific recommendation, never stored in the shared content cache."""
+
+    status: Literal["selected", "no_match", "no_collections", "unavailable"]
+    collection_id: UUID | None = None
+    collection_name: str | None = None
+    reason: str | None = None
+    provider: str | None = None
+    model: str | None = None
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cost_usd: float = 0.0
+    duration_ms: int = 0
+
+
 class AnalyzeResponse(BaseModel):
     """Everything the app should persist for one bookmark.
 
@@ -174,6 +194,7 @@ class AnalyzeResponse(BaseModel):
 
     extraction: ExtractionInfo | None = None
     embedding: EmbeddingBlock | None = None
+    collection_suggestion: CollectionSuggestion | None = None
 
 
 class EmbedRequest(BaseModel):
