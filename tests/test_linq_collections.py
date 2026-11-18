@@ -11,13 +11,18 @@ import httpx
 from fastapi.testclient import TestClient
 
 from enrichment.config import EnrichmentConfig
+from enrichment.prompts import COLLECTION_ROUTING_INSTRUCTION, SYSTEM_INSTRUCTION
 from enrichment.providers.base import ProviderError
+from enrichment.providers.gemini import GeminiProvider
+from enrichment.schema import CollectionRouting, Enrichment, EnrichmentMode, RESPONSE_SCHEMA, build_response_schema
+from extractor.envelope import ContentEnvelope, MediaKind, Platform
 from linq_server.auth import Caller
 from linq_server.collections import (
     CollectionLookupError,
     ExistingCollection,
     GeminiCollectionSelector,
     SupabaseCollectionCatalog,
+    suggestion_from_routing,
 )
 from linq_server.models import AnalyzeRequest, AnalyzeResponse
 from linq_server import main
@@ -250,6 +255,123 @@ class EndpointTests(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         self.service.analyze.assert_not_called()
         self.policy.charge.assert_not_called()
+
+
+class UnifiedRoutingTests(unittest.TestCase):
+    def _envelope(self) -> ContentEnvelope:
+        return ContentEnvelope(
+            url="https://example.com/kyoto-guide",
+            canonical_url="https://example.com/kyoto-guide",
+            url_hash="same-shared-content",
+            platform=Platform.WEB,
+            media_kind=MediaKind.ARTICLE,
+            title="Kyoto Travel Guide",
+        )
+
+    def test_default_schema_and_prompt_unchanged_without_collections(self):
+        self.assertIs(build_response_schema(None), RESPONSE_SCHEMA)
+        provider = GeminiProvider(EnrichmentConfig(api_key="fake-test-key"))
+        body = provider._request_body([{"text": "hello"}], EnrichmentMode.METADATA)
+        self.assertEqual(body["systemInstruction"]["parts"][0]["text"], SYSTEM_INSTRUCTION)
+        self.assertNotIn("collection_routing", body["generationConfig"]["responseSchema"]["properties"])
+        self.assertEqual(body["generationConfig"]["maxOutputTokens"], 4096)
+
+    def test_unified_gemini_call_populates_collection_routing_without_persisting(self):
+        provider = GeminiProvider(EnrichmentConfig(api_key="fake-test-key"))
+        payload = {
+            "summary": "Three-day itinerary for Kyoto temples and Nishiki Market.",
+            "description": "Covers Fushimi Inari, Arashiyama, and Nishiki Market food stalls.",
+            "details": ["Walks through Fushimi Inari gates at sunrise"],
+            "tags": ["kyoto", "japan", "travel", "itinerary"],
+            "category": "travel",
+            "content_type": "guide",
+            "collection_routing": {
+                "action": "assign",
+                "collection_id": COLLECTION,
+                "proposed_topic": "",
+                "confidence": 0.94,
+                "reason": "Matches existing Travel collection.",
+            },
+        }
+        fake_response = {
+            "candidates": [{"content": {"parts": [{"text": json.dumps(payload)}]}}],
+            "usageMetadata": {"promptTokenCount": 400, "candidatesTokenCount": 120, "thoughtsTokenCount": 0},
+        }
+        choices = [{"id": COLLECTION, "name": "Travel"}]
+        with patch.object(provider, "_generate", return_value=("gemini-3.5-flash-lite", fake_response)) as generate:
+            enrichment = provider.enrich(
+                self._envelope(),
+                EnrichmentMode.METADATA,
+                "Kyoto itinerary article",
+                collection_choices=choices,
+            )
+
+        sent_body = generate.call_args.args[1]
+        self.assertIn(COLLECTION_ROUTING_INSTRUCTION, sent_body["systemInstruction"]["parts"][0]["text"])
+        self.assertEqual(sent_body["generationConfig"]["maxOutputTokens"], 4096)
+        self.assertEqual(
+            sent_body["generationConfig"]["responseSchema"]["properties"]["collection_routing"]["properties"]["collection_id"]["enum"],
+            ["NONE", COLLECTION],
+        )
+        self.assertIsNotNone(enrichment.collection_routing)
+        self.assertEqual(enrichment.collection_routing.action, "assign")
+        self.assertNotIn("collection_routing", enrichment.model_dump())
+
+        suggestion = suggestion_from_routing(
+            enrichment.collection_routing,
+            [ExistingCollection(UUID(COLLECTION), "Travel")],
+            enrichment,
+        )
+        self.assertEqual(suggestion.status, "selected")
+        self.assertEqual(str(suggestion.collection_id), COLLECTION)
+        self.assertAlmostEqual(suggestion.confidence or 0.0, 0.94)
+
+    def test_propose_new_and_invalid_id_mapping(self):
+        enrichment = Enrichment(url_hash="h", provider="gemini", model="gemini-3.5-flash-lite")
+        choices = [ExistingCollection(UUID(COLLECTION), "Travel")]
+
+        proposed = suggestion_from_routing(
+            CollectionRouting(
+                action="propose_new",
+                collection_id="NONE",
+                proposed_topic="Cooking",
+                confidence=0.88,
+                reason="No cooking collection exists yet.",
+            ),
+            choices,
+            enrichment,
+        )
+        self.assertEqual(proposed.status, "no_match")
+        self.assertEqual(proposed.proposed_topic, "Cooking")
+        self.assertAlmostEqual(proposed.confidence or 0.0, 0.88)
+
+        empty_user = suggestion_from_routing(
+            CollectionRouting(
+                action="propose_new",
+                collection_id="NONE",
+                proposed_topic="Cooking",
+                confidence=0.9,
+                reason="User has no collections yet.",
+            ),
+            [],
+            enrichment,
+        )
+        self.assertEqual(empty_user.status, "no_collections")
+        self.assertEqual(empty_user.proposed_topic, "Cooking")
+
+        invented = suggestion_from_routing(
+            CollectionRouting(
+                action="assign",
+                collection_id=SECOND_COLLECTION,
+                proposed_topic="",
+                confidence=0.9,
+                reason="Invented UUID",
+            ),
+            choices,
+            enrichment,
+        )
+        self.assertEqual(invented.status, "unavailable")
+        self.assertEqual(invented.reason, "invalid_model_response")
 
 
 if __name__ == "__main__":

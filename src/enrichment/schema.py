@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, Literal, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -53,6 +53,22 @@ class Entities(BaseModel):
                 if cleaned:
                     out.setdefault(cleaned, None)
         return list(out)
+
+
+class CollectionRouting(BaseModel):
+    """Transient per-user collection routing returned when suggest_collection is enabled.
+
+    Never stored in the shared content cache because collection IDs and names belong to
+    the requesting user.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    action: Literal["assign", "propose_new", "none"] = "none"
+    collection_id: str | None = None
+    proposed_topic: str = ""
+    confidence: float = 0.0
+    reason: str = ""
 
 
 class Enrichment(BaseModel):
@@ -93,6 +109,7 @@ class Enrichment(BaseModel):
     degraded: bool = False
     note: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    collection_routing: CollectionRouting | None = Field(default=None, exclude=True)
 
     def search_text(self) -> str:
         """The enrichment's contribution to the document that gets embedded.
@@ -234,3 +251,52 @@ RESPONSE_SCHEMA: dict[str, Any] = {
         "language",
     ],
 }
+
+
+def build_response_schema(collection_ids: Sequence[str] | None = None) -> dict[str, Any]:
+    """Return the Gemini responseSchema, adding `collection_routing` only when requested."""
+    if collection_ids is None:
+        return RESPONSE_SCHEMA
+
+    id_schema: dict[str, Any] = {
+        "type": "string",
+        "description": "Exact UUID from EXISTING_COLLECTIONS when action is 'assign', else 'NONE'.",
+    }
+    if collection_ids:
+        id_schema["enum"] = ["NONE", *collection_ids]
+
+    routing_schema: dict[str, Any] = {
+        "type": "object",
+        "description": "Broad library routing decision for the requesting user.",
+        "properties": {
+            "action": {
+                "type": "string",
+                "enum": ["assign", "propose_new", "none"],
+            },
+            "collection_id": id_schema,
+            "proposed_topic": {
+                "type": "string",
+                "description": "Broad 1-2 word Title Case topic when action is 'propose_new', else ''.",
+            },
+            "confidence": {
+                "type": "number",
+                "description": "Confidence score between 0.0 and 1.0.",
+            },
+            "reason": {
+                "type": "string",
+                "description": "Concise one-sentence justification.",
+            },
+        },
+        "required": ["action", "collection_id", "proposed_topic", "confidence", "reason"],
+        "propertyOrdering": ["action", "collection_id", "proposed_topic", "confidence", "reason"],
+    }
+
+    return {
+        **RESPONSE_SCHEMA,
+        "properties": {
+            **RESPONSE_SCHEMA["properties"],
+            "collection_routing": routing_schema,
+        },
+        "required": [*RESPONSE_SCHEMA["required"], "collection_routing"],
+        "propertyOrdering": [*RESPONSE_SCHEMA["propertyOrdering"], "collection_routing"],
+    }

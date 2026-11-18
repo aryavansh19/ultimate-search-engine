@@ -150,6 +150,8 @@ class CollectionSuggestion(BaseModel):
     status: Literal["selected", "no_match", "no_collections", "unavailable"]
     collection_id: UUID | None = None
     collection_name: str | None = None
+    proposed_topic: str | None = None
+    confidence: float | None = None
     reason: str | None = None
     provider: str | None = None
     model: str | None = None

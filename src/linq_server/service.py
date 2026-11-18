@@ -26,6 +26,7 @@ import logging
 import os
 import re
 from dataclasses import dataclass
+from typing import Sequence
 
 from enrichment import Enricher, EnrichmentConfig
 from enrichment.schema import Enrichment, EnrichmentMode
@@ -36,6 +37,7 @@ from search import SearchConfig
 from search.chunking import chunk_document
 from search.embedder import BaseEmbedder, EmbedderError, EmbedderUnavailable, build_embedder
 
+from .collections import ExistingCollection, suggestion_from_routing
 from .models import (
     AnalyzeRequest,
     AnalyzeResponse,
@@ -125,7 +127,13 @@ class AnalysisService:
         }
 
     # ----------------------------------------------------------------------- analyze
-    def analyze(self, request: AnalyzeRequest, *, trace_id: str = "local") -> AnalyzeResponse:
+    def analyze(
+        self,
+        request: AnalyzeRequest,
+        *,
+        trace_id: str = "local",
+        collection_choices: Sequence[ExistingCollection] | None = None,
+    ) -> AnalyzeResponse:
         """Extract, enrich, chunk and embed one link. Blocking; call off the event loop."""
         log.info(
             "[search-pipeline:%s] 2. extraction started url=%s client_payload=%s",
@@ -193,9 +201,17 @@ class AnalysisService:
             mode.value if mode else "automatic",
         )
 
+        raw_collections = (
+            [{"id": str(c.id), "name": c.name} for c in collection_choices]
+            if collection_choices is not None
+            else None
+        )
         try:
             enrichment = self.enricher.enrich(
-                envelope, force=request.force_media, mode=mode
+                envelope,
+                force=request.force_media,
+                mode=mode,
+                collection_choices=raw_collections,
             )
         except Exception as exc:  # noqa: BLE001
             # A failed enrichment must not lose the extraction. The client still gets the
@@ -277,6 +293,11 @@ class AnalysisService:
                     kinds=embedding.kinds,
                 )
                 if embedding
+                else None
+            ),
+            collection_suggestion=(
+                suggestion_from_routing(enrichment.collection_routing, collection_choices, enrichment)
+                if enrichment.collection_routing is not None and collection_choices is not None
                 else None
             ),
         )

@@ -6,7 +6,7 @@ import json
 import os
 import time
 from dataclasses import dataclass, replace
-from typing import Iterable
+from typing import Iterable, Sequence
 from uuid import UUID
 
 import httpx
@@ -16,6 +16,7 @@ from enrichment.config import EnrichmentConfig
 from enrichment.pricing import estimate_cost, is_priced
 from enrichment.providers.base import ProviderError
 from enrichment.providers.gemini import GeminiProvider, _collect_text
+from enrichment.schema import CollectionRouting, Enrichment
 
 from .auth import Caller
 from .models import AnalyzeResponse, CollectionSuggestion
@@ -190,3 +191,58 @@ class GeminiCollectionSelector(GeminiProvider):
                 status="unavailable", reason="model_unavailable",
                 duration_ms=int((time.perf_counter() - started) * 1000),
             )
+
+
+def suggestion_from_routing(
+    routing: CollectionRouting,
+    choices: Sequence[ExistingCollection],
+    enrichment: Enrichment,
+) -> CollectionSuggestion:
+    """Validate and convert unified enrichment `collection_routing` into `CollectionSuggestion`."""
+    candidates = {str(choice.id): choice.name for choice in choices}
+    confidence = max(0.0, min(1.0, float(routing.confidence)))
+    reason = " ".join(routing.reason.split()) or None
+    info: dict[str, object] = {
+        "provider": enrichment.provider,
+        "model": enrichment.model,
+        "confidence": confidence,
+    }
+
+    if routing.action == "assign" and routing.collection_id in candidates:
+        return CollectionSuggestion(
+            status="selected",
+            collection_id=UUID(routing.collection_id),
+            collection_name=candidates[routing.collection_id],
+            reason=reason,
+            **info,
+        )
+
+    if routing.action == "assign":
+        return CollectionSuggestion(
+            status="unavailable",
+            reason="invalid_model_response",
+            **info,
+        )
+
+    topic = " ".join(routing.proposed_topic.split()) or None
+    if not choices:
+        return CollectionSuggestion(
+            status="no_collections",
+            proposed_topic=topic,
+            reason=reason,
+            **info,
+        )
+
+    if routing.action == "propose_new":
+        return CollectionSuggestion(
+            status="no_match",
+            proposed_topic=topic,
+            reason=reason,
+            **info,
+        )
+
+    return CollectionSuggestion(
+        status="no_match",
+        reason=reason,
+        **info,
+    )

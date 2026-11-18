@@ -19,7 +19,7 @@ gets tagged badly, stays searchable, and is marked for a later re-run.
 from __future__ import annotations
 
 import logging
-from typing import Sequence
+from typing import Mapping, Sequence
 
 from extractor import ContentEnvelope, EnvelopeCache, ExtractionCascade, SignalStrength
 from extractor.envelope import MediaKind, content_hash
@@ -119,6 +119,7 @@ class Enricher:
         force: bool = False,
         mode: EnrichmentMode | None = None,
         use_store: bool = True,
+        collection_choices: Sequence[Mapping[str, str]] | None = None,
     ) -> Enrichment:
         source = source_hash(envelope)
 
@@ -135,7 +136,9 @@ class Enricher:
             self._document(envelope), self.config.max_text_chars
         )
 
-        enrichment, notes = self._run_providers(envelope, chosen, document)
+        enrichment, notes = self._run_providers(
+            envelope, chosen, document, collection_choices=collection_choices
+        )
         enrichment.source_hash = source
         if budget_note:
             notes.insert(0, budget_note)
@@ -228,7 +231,12 @@ class Enricher:
         return mode, None
 
     def _run_providers(
-        self, envelope: ContentEnvelope, mode: EnrichmentMode, document: str
+        self,
+        envelope: ContentEnvelope,
+        mode: EnrichmentMode,
+        document: str,
+        *,
+        collection_choices: Sequence[Mapping[str, str]] | None = None,
     ) -> tuple[Enrichment, list[str]]:
         """Try the requested mode, then text, then the offline fallback."""
         notes: list[str] = []
@@ -248,6 +256,16 @@ class Enricher:
                 if not provider.supports(attempt_mode):
                     continue
                 try:
+                    if isinstance(provider, GeminiProvider) and collection_choices is not None:
+                        return (
+                            provider.enrich(
+                                envelope,
+                                attempt_mode,
+                                document,
+                                collection_choices=collection_choices,
+                            ),
+                            notes,
+                        )
                     return provider.enrich(envelope, attempt_mode, document), notes
                 except ProviderError as exc:
                     notes.append(f"{provider.name} {label} failed: {exc}")

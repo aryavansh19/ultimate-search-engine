@@ -29,7 +29,7 @@ import mimetypes
 import re
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping, Sequence
 
 import httpx
 
@@ -38,8 +38,19 @@ from quota import gemini_governor
 from extractor import ContentEnvelope
 
 from ..pricing import estimate_cost, estimate_video_tokens, is_priced
-from ..prompts import PROMPT_VERSION, SYSTEM_INSTRUCTION, build_media_prompt, build_text_prompt
-from ..schema import RESPONSE_SCHEMA, Enrichment, Entities, EnrichmentMode
+from ..prompts import (
+    PROMPT_VERSION,
+    build_media_prompt,
+    build_system_instruction,
+    build_text_prompt,
+)
+from ..schema import (
+    CollectionRouting,
+    Enrichment,
+    Entities,
+    EnrichmentMode,
+    build_response_schema,
+)
 from ..taxonomy import coerce_category, coerce_content_type, normalize_tags
 from ..video import compress_video
 from .base import EnrichmentProvider, ProviderError, ProviderUnavailable
@@ -99,7 +110,12 @@ class GeminiProvider(EnrichmentProvider):
 
     # ------------------------------------------------------------------- entrypoint
     def enrich(
-        self, envelope: ContentEnvelope, mode: EnrichmentMode, document: str
+        self,
+        envelope: ContentEnvelope,
+        mode: EnrichmentMode,
+        document: str,
+        *,
+        collection_choices: Sequence[Mapping[str, str]] | None = None,
     ) -> Enrichment:
         available, reason = self.availability()
         if not available:
@@ -112,17 +128,24 @@ class GeminiProvider(EnrichmentProvider):
             prompt = build_media_prompt(
                 document, envelope.platform.value, envelope.canonical_url,
                 envelope.duration_s,
+                collections=collection_choices,
             )
             parts = [{"text": prompt}, *parts]
         else:
             candidates = [self.config.text_model, self.config.text_fallback_model]
             note = "text only"
             prompt = build_text_prompt(
-                document, envelope.platform.value, envelope.canonical_url
+                document, envelope.platform.value, envelope.canonical_url,
+                collections=collection_choices,
             )
             parts = [{"text": prompt}]
 
-        payload = self._request_body(parts, mode)
+        collection_ids = (
+            [str(c["id"]) for c in collection_choices]
+            if collection_choices is not None
+            else None
+        )
+        payload = self._request_body(parts, mode, collection_ids=collection_ids)
         model, data = self._generate(candidates, payload)
         if model != candidates[0]:
             note = f"{note}; fell back from {candidates[0]}"
@@ -276,10 +299,16 @@ class GeminiProvider(EnrichmentProvider):
         return estimate_cost(model, input_tokens, 500)
 
     # -------------------------------------------------------------------- requests
-    def _request_body(self, parts: list[dict[str, Any]], mode: EnrichmentMode) -> dict:
+    def _request_body(
+        self,
+        parts: list[dict[str, Any]],
+        mode: EnrichmentMode,
+        *,
+        collection_ids: Sequence[str] | None = None,
+    ) -> dict:
         generation: dict[str, Any] = {
             "responseMimeType": "application/json",
-            "responseSchema": RESPONSE_SCHEMA,
+            "responseSchema": build_response_schema(collection_ids),
             "temperature": 0.2,
             "maxOutputTokens": 4096,
         }
@@ -290,7 +319,15 @@ class GeminiProvider(EnrichmentProvider):
                 else "MEDIA_RESOLUTION_LOW"
             )
         return {
-            "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
+            "systemInstruction": {
+                "parts": [
+                    {
+                        "text": build_system_instruction(
+                            include_collection_routing=collection_ids is not None
+                        )
+                    }
+                ]
+            },
             "contents": [{"role": "user", "parts": parts}],
             "generationConfig": generation,
         }
@@ -633,6 +670,14 @@ def _to_enrichment(
         if str(item).strip()
     ][:30]
 
+    raw_routing = parsed.get("collection_routing")
+    collection_routing: CollectionRouting | None = None
+    if isinstance(raw_routing, dict):
+        try:
+            collection_routing = CollectionRouting.model_validate(raw_routing)
+        except Exception:
+            collection_routing = None
+
     return Enrichment(
         url_hash=envelope.url_hash,
         summary=" ".join(str(parsed.get("summary") or "").split()),
@@ -654,4 +699,5 @@ def _to_enrichment(
         duration_ms=duration_ms,
         degraded=False,
         note=note,
+        collection_routing=collection_routing,
     )

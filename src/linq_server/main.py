@@ -191,22 +191,30 @@ async def analyze(request: AnalyzeRequest, http: Request) -> AnalyzeResponse:
     )
 
     def run_analysis() -> AnalyzeResponse:
-        result = svc.analyze(request, trace_id=trace_id)
+        choices = None
+        lookup_failed = False
         if request.suggest_collection:
             try:
                 catalog = SupabaseCollectionCatalog.from_env(policy.supabase.supabase_urls)
                 token = policy._bearer(http) or http.headers.get("x-access-token") or ""
                 choices = catalog.fetch(caller, token)
-                selector = GeminiCollectionSelector(svc.enrichment_config)
-                result.collection_suggestion = selector.select(result, choices)
             except CollectionLookupError:
+                lookup_failed = True
+
+        result = svc.analyze(request, trace_id=trace_id, collection_choices=choices)
+        if request.suggest_collection:
+            if lookup_failed:
                 result.collection_suggestion = CollectionSuggestion(
                     status="unavailable", reason="lookup_unavailable"
                 )
-            log.info(
-                "[search-pipeline:%s] collection suggestion status=%s",
-                trace_id, result.collection_suggestion.status,
-            )
+            elif result.collection_suggestion is None and choices is not None:
+                selector = GeminiCollectionSelector(svc.enrichment_config)
+                result.collection_suggestion = selector.select(result, choices)
+            if result.collection_suggestion is not None:
+                log.info(
+                    "[search-pipeline:%s] collection suggestion status=%s",
+                    trace_id, result.collection_suggestion.status,
+                )
         return result
 
     try:
