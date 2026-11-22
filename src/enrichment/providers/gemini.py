@@ -33,7 +33,7 @@ from typing import Any
 
 import httpx
 
-from quota import gemini_governor
+from quota import GeminiKeyPool, GeminiKeySlot, gemini_key_pool
 
 from extractor import ContentEnvelope
 
@@ -106,9 +106,11 @@ class GeminiProvider(EnrichmentProvider):
             raise ProviderUnavailable(reason or "unavailable")
 
         started = time.perf_counter()
+        pinned_slot: GeminiKeySlot | None = None
         if mode is EnrichmentMode.MEDIA:
             candidates = [self.config.media_model, self.config.media_fallback_model]
-            parts, note = self._media_parts(envelope)
+            pinned_slot = self._resolve_slot() if self._needs_file_upload(envelope) else None
+            parts, note = self._media_parts(envelope, api_key=pinned_slot.api_key if pinned_slot else None)
             prompt = build_media_prompt(
                 document, envelope.platform.value, envelope.canonical_url,
                 envelope.duration_s,
@@ -123,7 +125,7 @@ class GeminiProvider(EnrichmentProvider):
             parts = [{"text": prompt}]
 
         payload = self._request_body(parts, mode)
-        model, data = self._generate(candidates, payload)
+        model, data = self._generate(candidates, payload, pinned_slot=pinned_slot)
         if model != candidates[0]:
             note = f"{note}; fell back from {candidates[0]}"
 
@@ -161,8 +163,26 @@ class GeminiProvider(EnrichmentProvider):
             note=note,
         )
 
+    def _needs_file_upload(self, envelope: ContentEnvelope) -> bool:
+        source = envelope.media_url or envelope.canonical_url
+        return not (_is_youtube(envelope.canonical_url) or _is_youtube(source))
+
+    def _resolve_slot(self) -> GeminiKeySlot:
+        configured = list(self.config.api_keys) if self.config.api_keys else (
+            [self.config.api_key] if self.config.api_key else []
+        )
+        if configured and [s.api_key for s in gemini_key_pool.slots] == configured:
+            return gemini_key_pool.select_slot()
+        if not hasattr(self, "_local_pool") or [s.api_key for s in self._local_pool.slots] != configured:
+            self._local_pool = GeminiKeyPool(configured)
+        return self._local_pool.select_slot()
+
     def _generate(
-        self, candidates: list[str | None], payload: dict
+        self,
+        candidates: list[str | None],
+        payload: dict,
+        *,
+        pinned_slot: GeminiKeySlot | None = None,
     ) -> tuple[str, dict]:
         """Call the first model that is actually reachable.
 
@@ -182,7 +202,10 @@ class GeminiProvider(EnrichmentProvider):
             attempts = 3 if is_last else 1
             try:
                 return model, self._post(
-                    f"models/{model}:generateContent", payload, attempts=attempts
+                    f"models/{model}:generateContent",
+                    payload,
+                    attempts=attempts,
+                    pinned_slot=pinned_slot,
                 )
             except ModelUnavailable as exc:
                 last = exc
@@ -295,17 +318,27 @@ class GeminiProvider(EnrichmentProvider):
             "generationConfig": generation,
         }
 
-    def _post(self, path: str, payload: dict, attempts: int = 3) -> dict:
+    def _post(
+        self,
+        path: str,
+        payload: dict,
+        attempts: int = 3,
+        *,
+        pinned_slot: GeminiKeySlot | None = None,
+    ) -> dict:
         url = f"{self.config.api_base}/{path}"
-        headers = {
-            "x-goog-api-key": str(self.config.api_key),
-            "Content-Type": "application/json",
-        }
         last_error: str = "unknown"
+        last_key: str | None = pinned_slot.api_key if pinned_slot else self.config.api_key
         transport_only = True
         for attempt in range(max(1, attempts)):
-            # Adaptive rate pacing: self-throttles before dispatching to prevent 429
-            gemini_governor.acquire()
+            slot = pinned_slot or self._resolve_slot()
+            last_key = slot.api_key
+            headers = {
+                "x-goog-api-key": slot.api_key,
+                "Content-Type": "application/json",
+            }
+            # Adaptive rate pacing per key: self-throttles before dispatching to prevent 429
+            slot.governor.acquire()
             try:
                 with httpx.Client(timeout=self.config.request_timeout) as client:
                     response = client.post(url, json=payload, headers=headers)
@@ -313,36 +346,37 @@ class GeminiProvider(EnrichmentProvider):
                     data = response.json()
                     usage = data.get("usageMetadata", {})
                     tokens = int(usage.get("totalTokenCount") or 0)
-                    gemini_governor.record_success(actual_tokens=tokens)
+                    slot.governor.record_success(actual_tokens=tokens)
                     return data
                 body = " ".join(response.text.split())[:240]
                 last_error = f"HTTP {response.status_code}: {body}"
                 transport_only = False
                 if response.status_code == 429:
                     retry_after = _parse_retry_after(response)
-                    cooldown = gemini_governor.record_error(
+                    cooldown = slot.governor.record_error(
                         status_code=429, retry_after=retry_after, error_body=body
                     )
-                    delay = retry_after or cooldown or (1.5 * (attempt + 1))
+                    # When cycling across multiple keys, rotate immediately without sleeping on the failed key's cooldown.
+                    delay = 0.0 if (pinned_slot is None and self._pool_size() > 1) else (retry_after or cooldown or (1.5 * (attempt + 1)))
                 else:
-                    gemini_governor.record_error(status_code=response.status_code)
+                    slot.governor.record_error(status_code=response.status_code)
                     delay = 1.5 * (attempt + 1)
 
                 if response.status_code in _MODEL_UNAVAILABLE_STATUSES:
                     # A retired or overloaded model. Retrying the same name will not
                     # help; the caller should try a different model.
-                    raise ModelUnavailable(_redact(last_error, self.config.api_key))
+                    raise ModelUnavailable(_redact(last_error, last_key))
                 if response.status_code not in _RETRY_STATUSES:
                     break
             except httpx.HTTPError as exc:
                 last_error = f"{type(exc).__name__}: {exc}"
-                gemini_governor.record_error(status_code=500)
+                slot.governor.record_error(status_code=500)
                 delay = 1.5 * (attempt + 1)
             # Rate limits and 5xx are worth a short backoff; anything else is not.
-            if attempt < attempts - 1:
+            if attempt < attempts - 1 and delay > 0:
                 time.sleep(delay)
 
-        message = _redact(last_error, self.config.api_key)
+        message = _redact(last_error, last_key)
         if transport_only:
             # Every attempt died in transport -- almost always a read timeout while the
             # model chews on video. A model that cannot answer within the timeout is
@@ -352,7 +386,14 @@ class GeminiProvider(EnrichmentProvider):
         raise ProviderError(message)
 
     # ----------------------------------------------------------------------- media
-    def _media_parts(self, envelope: ContentEnvelope) -> tuple[list[dict], str]:
+    def _pool_size(self) -> int:
+        if self.config.api_keys:
+            return len(self.config.api_keys)
+        return 1 if self.config.api_key else 0
+
+    def _media_parts(
+        self, envelope: ContentEnvelope, *, api_key: str | None = None
+    ) -> tuple[list[dict], str]:
         source = envelope.media_url or envelope.canonical_url
 
         if _is_youtube(envelope.canonical_url) or _is_youtube(source):
@@ -394,7 +435,7 @@ class GeminiProvider(EnrichmentProvider):
             if result.note:
                 label = f"{label}, {result.note}"
 
-        uri, mime = self._upload_bytes(blob, mime)
+        uri, mime = self._upload_bytes(blob, mime, api_key=api_key)
         part: dict[str, Any] = {"fileData": {"fileUri": uri, "mimeType": mime}}
 
         # ffmpeg already enforced the duration cap, so a clip window would be redundant.
@@ -470,14 +511,16 @@ class GeminiProvider(EnrichmentProvider):
             return f"{base}/upload"
         return f"{base[:host_end]}/upload{base[host_end:]}"
 
-    def _upload_bytes(self, blob: bytes, mime: str) -> tuple[str, str]:
+    def _upload_bytes(
+        self, blob: bytes, mime: str, *, api_key: str | None = None
+    ) -> tuple[str, str]:
         """Files API resumable upload, then wait for the file to become ACTIVE.
 
         The wait is required, not optional: video is processed asynchronously and
         referencing a PROCESSING file in generateContent fails.
         """
         base = self._upload_base
-        key = str(self.config.api_key)
+        key = str(api_key or self.config.api_key)
         start_headers = {
             "x-goog-api-key": key,
             "X-Goog-Upload-Protocol": "resumable",
@@ -511,7 +554,7 @@ class GeminiProvider(EnrichmentProvider):
                 info = (finish.json() or {}).get("file") or {}
         except httpx.HTTPError as exc:
             raise ProviderError(
-                _redact(f"media upload failed: {exc}", self.config.api_key)
+                _redact(f"media upload failed: {exc}", key)
             ) from exc
 
         uri = info.get("uri")
@@ -519,12 +562,13 @@ class GeminiProvider(EnrichmentProvider):
         if not uri or not name:
             raise ProviderError("Files API response missing file uri")
 
-        self._await_active(name)
+        self._await_active(name, api_key=key)
         return str(uri), str(info.get("mimeType") or mime)
 
-    def _await_active(self, name: str) -> None:
+    def _await_active(self, name: str, *, api_key: str | None = None) -> None:
         deadline = time.monotonic() + self.config.upload_poll_timeout_s
-        headers = {"x-goog-api-key": str(self.config.api_key)}
+        key = str(api_key or self.config.api_key)
+        headers = {"x-goog-api-key": key}
         delay = 1.0
         while time.monotonic() < deadline:
             try:
@@ -536,7 +580,7 @@ class GeminiProvider(EnrichmentProvider):
                     state = (response.json() or {}).get("state")
             except httpx.HTTPError as exc:
                 raise ProviderError(
-                    _redact(f"file state check failed: {exc}", self.config.api_key)
+                    _redact(f"file state check failed: {exc}", key)
                 ) from exc
 
             if state == "ACTIVE":

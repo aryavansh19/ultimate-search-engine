@@ -12,24 +12,32 @@ from __future__ import annotations
 
 from .governor import (
     AdaptivePacer,
+    GeminiKeyPool,
+    GeminiKeySlot,
     QuotaGovernor,
     QuotaState,
     QuotaTelemetry,
     SlidingWindowMeter,
     embedder_governor,
     gemini_governor,
+    gemini_key_pool,
     get_all_telemetry,
+    load_gemini_api_keys_from_env,
     scraper_governor,
 )
 
 __all__ = [
     "AdaptivePacer",
+    "GeminiKeyPool",
+    "GeminiKeySlot",
     "QuotaGovernor",
     "QuotaState",
     "QuotaTelemetry",
     "SlidingWindowMeter",
     "embedder_governor",
     "gemini_governor",
+    "gemini_key_pool",
     "get_all_telemetry",
+    "load_gemini_api_keys_from_env",
     "scraper_governor",
 ]

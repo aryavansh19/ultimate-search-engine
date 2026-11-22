@@ -398,16 +398,163 @@ def _env_int(name: str, default: int) -> int:
     return default
 
 
+def load_gemini_api_keys_from_env() -> list[str]:
+    """Load Gemini API keys from GEMINI_API_KEYS, GEMINI_API_KEY, and GEMINI_API_KEY_<N>."""
+    keys: list[str] = []
+    seen: set[str] = set()
+
+    def _add(raw: str | None) -> None:
+        if not raw:
+            return
+        for part in raw.replace("\n", ",").split(","):
+            cleaned = part.strip()
+            if cleaned and cleaned not in seen:
+                seen.add(cleaned)
+                keys.append(cleaned)
+
+    _add(os.getenv("GEMINI_API_KEYS"))
+    _add(os.getenv("GEMINI_API_KEY"))
+
+    numbered: list[tuple[int, str]] = []
+    for env_name, env_val in os.environ.items():
+        if env_name.startswith("GEMINI_API_KEY_") and env_val.strip():
+            suffix = env_name[len("GEMINI_API_KEY_") :]
+            if suffix.isdigit():
+                numbered.append((int(suffix), env_val))
+    for _, env_val in sorted(numbered, key=lambda item: item[0]):
+        _add(env_val)
+
+    if not keys:
+        _add(os.getenv("GOOGLE_API_KEY"))
+    return keys
+
+
+@dataclass(frozen=True)
+class GeminiKeySlot:
+    index: int
+    api_key: str
+    governor: QuotaGovernor
+
+
+class GeminiKeyPool:
+    """Cyclic round-robin pool of Gemini API keys, each backed by its own QuotaGovernor."""
+
+    def __init__(
+        self,
+        keys: list[str] | tuple[str, ...],
+        *,
+        max_rpm: float = 14.0,
+        max_tpm: int = 1_000_000,
+        max_rpd: int = 1500,
+        enabled: bool = True,
+    ) -> None:
+        self._lock = threading.Lock()
+        self._cursor = 0
+        self.slots: list[GeminiKeySlot] = [
+            GeminiKeySlot(
+                index=idx,
+                api_key=key,
+                governor=QuotaGovernor(
+                    service_name=f"gemini_key_{idx + 1}",
+                    max_rpm=max_rpm,
+                    max_tpm=max_tpm,
+                    max_rpd=max_rpd,
+                    enabled=enabled,
+                ),
+            )
+            for idx, key in enumerate(keys)
+            if key
+        ]
+
+    @property
+    def size(self) -> int:
+        return len(self.slots)
+
+    def select_slot(self, estimated_tokens: int = 0) -> GeminiKeySlot:
+        """Pick the next ready key in cyclic order, skipping cooled-down/saturated keys."""
+        if not self.slots:
+            raise RuntimeError("GeminiKeyPool has no configured API keys")
+        if len(self.slots) == 1:
+            return self.slots[0]
+
+        now_m = time.monotonic()
+        with self._lock:
+            n = len(self.slots)
+            start = self._cursor % n
+            best_slot = self.slots[start]
+            best_wait = float("inf")
+
+            for offset in range(n):
+                idx = (start + offset) % n
+                slot = self.slots[idx]
+                wait_time, _, _ = slot.governor.pacer.calculate_wait(
+                    slot.governor.meter,
+                    estimated_tokens=estimated_tokens,
+                    now_mono=now_m,
+                )
+                if wait_time <= 0.0:
+                    self._cursor = (idx + 1) % n
+                    return slot
+                if wait_time < best_wait:
+                    best_wait = wait_time
+                    best_slot = slot
+
+            self._cursor = (best_slot.index + 1) % n
+            return best_slot
+
+    def telemetry(self) -> dict[str, Any]:
+        slots_data = []
+        healthy_count = 0
+        for slot in self.slots:
+            snap = slot.governor.telemetry().to_dict()
+            if snap["status"] in ("healthy", "warning"):
+                healthy_count += 1
+            slots_data.append(
+                {
+                    "key_index": slot.index + 1,
+                    "status": snap["status"],
+                    "rpm": snap["rpm"],
+                    "max_rpm": snap["max_rpm"],
+                    "rpd": snap["rpd"],
+                    "max_rpd": snap["max_rpd"],
+                    "cooldown_remaining_s": snap["cooldown_remaining_s"],
+                    "lifetime_requests": snap["lifetime_requests"],
+                    "error_counts": snap["error_counts"],
+                }
+            )
+        return {
+            "pool_size": len(self.slots),
+            "healthy_keys": healthy_count,
+            "keys": slots_data,
+        }
+
+
 _pacing_enabled = os.getenv("QUOTA_PACING_ENABLED", "1").strip().lower() not in ("0", "false", "no")
 
-# Gemini free tier default: 15 RPM, 1,000,000 TPM, 1,500 RPD
+# Gemini free tier default: 15 RPM, 1,000,000 TPM, 1,500 RPD per key
 # (We default max_rpm to 14.0 for a tiny safety margin against network clock drift)
-gemini_governor = QuotaGovernor(
-    service_name="gemini",
-    max_rpm=_env_float("GEMINI_MAX_RPM", 14.0),
-    max_tpm=_env_int("GEMINI_MAX_TPM", 1_000_000),
-    max_rpd=_env_int("GEMINI_MAX_RPD", 1500),
+_gemini_max_rpm = _env_float("GEMINI_MAX_RPM", 14.0)
+_gemini_max_tpm = _env_int("GEMINI_MAX_TPM", 1_000_000)
+_gemini_max_rpd = _env_int("GEMINI_MAX_RPD", 1500)
+
+gemini_key_pool = GeminiKeyPool(
+    load_gemini_api_keys_from_env(),
+    max_rpm=_gemini_max_rpm,
+    max_tpm=_gemini_max_tpm,
+    max_rpd=_gemini_max_rpd,
     enabled=_pacing_enabled,
+)
+
+gemini_governor = (
+    gemini_key_pool.slots[0].governor
+    if gemini_key_pool.slots
+    else QuotaGovernor(
+        service_name="gemini",
+        max_rpm=_gemini_max_rpm,
+        max_tpm=_gemini_max_tpm,
+        max_rpd=_gemini_max_rpd,
+        enabled=_pacing_enabled,
+    )
 )
 
 # Embedder provider: 30 RPM default, 500,000 TPM
@@ -433,6 +580,7 @@ def get_all_telemetry() -> dict[str, dict[str, Any]]:
     """Return dictionary of all active governor telemetries."""
     return {
         "gemini": gemini_governor.telemetry().to_dict(),
+        "gemini_pool": gemini_key_pool.telemetry(),
         "embedder": embedder_governor.telemetry().to_dict(),
         "scraper": scraper_governor.telemetry().to_dict(),
     }

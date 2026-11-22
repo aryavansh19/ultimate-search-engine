@@ -11,6 +11,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from src.quota.governor import load_gemini_api_keys_from_env
+
 from dotenv import load_dotenv
 
 # override=True on purpose. python-dotenv defaults to leaving pre-existing OS
@@ -78,6 +80,7 @@ def _bool(name: str, default: bool) -> bool:
 @dataclass(slots=True)
 class EnrichmentConfig:
     api_key: str | None = None
+    api_keys: tuple[str, ...] = ()
     api_base: str = GEMINI_API_BASE
     text_model: str = DEFAULT_TEXT_MODEL
     media_model: str = DEFAULT_MEDIA_MODEL
@@ -141,16 +144,14 @@ class EnrichmentConfig:
 
     @property
     def has_api_key(self) -> bool:
-        return bool(self.api_key)
+        return bool(self.api_keys or self.api_key)
 
     @classmethod
     def from_env(cls) -> EnrichmentConfig:
+        keys = tuple(load_gemini_api_keys_from_env())
         return cls(
-            api_key=(
-                os.getenv("GEMINI_API_KEY")
-                or os.getenv("GOOGLE_API_KEY")
-                or None
-            ),
+            api_key=keys[0] if keys else None,
+            api_keys=keys,
             api_base=os.getenv("GEMINI_API_BASE", GEMINI_API_BASE).rstrip("/"),
             text_model=os.getenv("ENRICH_TEXT_MODEL", DEFAULT_TEXT_MODEL),
             media_model=os.getenv("ENRICH_MEDIA_MODEL", DEFAULT_MEDIA_MODEL),

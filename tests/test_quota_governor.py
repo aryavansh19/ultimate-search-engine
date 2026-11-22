@@ -106,5 +106,23 @@ class TestQuotaGovernor(unittest.TestCase):
         self.assertEqual(telem_after.error_counts.get(429), 1)
 
 
+class TestGeminiKeyPool(unittest.TestCase):
+    def test_cyclic_rotation_and_429_skip(self):
+        from quota.governor import GeminiKeyPool
+
+        pool = GeminiKeyPool(["key-a", "key-b", "key-c"], max_rpm=10.0, max_rpd=100)
+        picked = [pool.select_slot().api_key for _ in range(6)]
+        self.assertEqual(picked, ["key-a", "key-b", "key-c", "key-a", "key-b", "key-c"])
+
+        # Put key-a into 429 cooldown; pool must skip it and cycle between key-b and key-c.
+        pool.slots[0].governor.record_error(status_code=429, retry_after=30.0)
+        picked_healthy = [pool.select_slot().api_key for _ in range(4)]
+        self.assertEqual(picked_healthy, ["key-b", "key-c", "key-b", "key-c"])
+
+        telem = pool.telemetry()
+        self.assertEqual(telem["pool_size"], 3)
+        self.assertEqual(telem["healthy_keys"], 2)
+
+
 if __name__ == "__main__":
     unittest.main()
