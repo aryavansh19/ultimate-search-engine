@@ -39,6 +39,7 @@ from extractor import ContentEnvelope
 
 from ..pricing import estimate_cost, estimate_video_tokens, is_priced
 from ..prompts import PROMPT_VERSION, SYSTEM_INSTRUCTION, build_media_prompt, build_text_prompt
+from ..telemetry import record_ai_telemetry
 from ..schema import RESPONSE_SCHEMA, Enrichment, Entities, EnrichmentMode
 from ..taxonomy import coerce_category, coerce_content_type, normalize_tags
 from ..video import compress_video
@@ -327,6 +328,7 @@ class GeminiProvider(EnrichmentProvider):
         pinned_slot: GeminiKeySlot | None = None,
     ) -> dict:
         url = f"{self.config.api_base}/{path}"
+        model_name = path.removeprefix("models/").split(":", 1)[0]
         last_error: str = "unknown"
         last_key: str | None = pinned_slot.api_key if pinned_slot else self.config.api_key
         transport_only = True
@@ -339,14 +341,32 @@ class GeminiProvider(EnrichmentProvider):
             }
             # Adaptive rate pacing per key: self-throttles before dispatching to prevent 429
             slot.governor.acquire()
+            call_started = time.perf_counter()
             try:
                 with httpx.Client(timeout=self.config.request_timeout) as client:
                     response = client.post(url, json=payload, headers=headers)
+                call_ms = int((time.perf_counter() - call_started) * 1000)
                 if response.status_code == 200:
                     data = response.json()
                     usage = data.get("usageMetadata", {})
-                    tokens = int(usage.get("totalTokenCount") or 0)
+                    prompt_tokens = int(usage.get("promptTokenCount") or 0)
+                    candidates_tokens = int(usage.get("candidatesTokenCount") or 0) + int(
+                        usage.get("thoughtsTokenCount") or 0
+                    )
+                    tokens = int(usage.get("totalTokenCount") or (prompt_tokens + candidates_tokens))
                     slot.governor.record_success(actual_tokens=tokens)
+                    rpm_now, _, _, _ = slot.governor.meter.metrics()
+                    record_ai_telemetry(
+                        model=model_name,
+                        api_key=slot.api_key,
+                        status_code=200,
+                        duration_ms=call_ms,
+                        rpm_in_window=rpm_now,
+                        prompt_tokens=prompt_tokens,
+                        candidates_tokens=candidates_tokens,
+                        total_tokens=tokens,
+                        stage="media" if pinned_slot is not None else "metadata",
+                    )
                     return data
                 body = " ".join(response.text.split())[:240]
                 last_error = f"HTTP {response.status_code}: {body}"
@@ -362,6 +382,19 @@ class GeminiProvider(EnrichmentProvider):
                     slot.governor.record_error(status_code=response.status_code)
                     delay = 1.5 * (attempt + 1)
 
+                rpm_now, _, _, _ = slot.governor.meter.metrics()
+                record_ai_telemetry(
+                    model=model_name,
+                    api_key=slot.api_key,
+                    status_code=response.status_code,
+                    duration_ms=call_ms,
+                    rpm_in_window=rpm_now,
+                    error_message=_redact(last_error, last_key),
+                    is_fallback=True,
+                    fallback_reason=f"HTTP {response.status_code}",
+                    stage="media" if pinned_slot is not None else "metadata",
+                )
+
                 if response.status_code in _MODEL_UNAVAILABLE_STATUSES:
                     # A retired or overloaded model. Retrying the same name will not
                     # help; the caller should try a different model.
@@ -369,8 +402,21 @@ class GeminiProvider(EnrichmentProvider):
                 if response.status_code not in _RETRY_STATUSES:
                     break
             except httpx.HTTPError as exc:
+                call_ms = int((time.perf_counter() - call_started) * 1000)
                 last_error = f"{type(exc).__name__}: {exc}"
                 slot.governor.record_error(status_code=500)
+                rpm_now, _, _, _ = slot.governor.meter.metrics()
+                record_ai_telemetry(
+                    model=model_name,
+                    api_key=slot.api_key,
+                    status_code=500,
+                    duration_ms=call_ms,
+                    rpm_in_window=rpm_now,
+                    error_message=_redact(last_error, last_key),
+                    is_fallback=True,
+                    fallback_reason=type(exc).__name__,
+                    stage="media" if pinned_slot is not None else "metadata",
+                )
                 delay = 1.5 * (attempt + 1)
             # Rate limits and 5xx are worth a short backoff; anything else is not.
             if attempt < attempts - 1 and delay > 0:
