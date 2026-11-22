@@ -11,7 +11,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from src.quota.governor import load_gemini_api_keys_from_env
+from quota import load_gemini_api_keys_from_env
 
 from dotenv import load_dotenv
 
