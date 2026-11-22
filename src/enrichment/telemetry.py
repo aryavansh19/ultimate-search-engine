@@ -30,15 +30,17 @@ def _supabase_telemetry_config() -> tuple[str, str] | None:
 
 def _post_telemetry_row(url: str, service_key: str, row: dict[str, Any]) -> None:
     try:
+        headers = {
+            "apikey": service_key,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+        }
+        if not service_key.startswith("sb_secret_"):
+            headers["Authorization"] = f"Bearer {service_key}"
         with httpx.Client(timeout=5.0) as client:
             resp = client.post(
                 f"{url}/rest/v1/ai_api_telemetry",
-                headers={
-                    "apikey": service_key,
-                    "Authorization": f"Bearer {service_key}",
-                    "Content-Type": "application/json",
-                    "Prefer": "return=minimal",
-                },
+                headers=headers,
                 json=row,
             )
             if resp.status_code >= 400:
