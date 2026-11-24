@@ -39,6 +39,7 @@ class ModelPrice:
 MODEL_PRICES: dict[str, ModelPrice] = {
     # Gemini 3.x Flash family -- promotional pricing through 2026-12-31.
     "gemini-3.7-flash": ModelPrice(0.75, 3.75, "doubles 2027-01-01"),
+    "gemini-3.8-flash": ModelPrice(0.50, 3.00),
     "gemini-3.6-flash": ModelPrice(0.75, 3.75, "doubles 2027-01-01"),
     "gemini-3.5-flash": ModelPrice(1.50, 9.00),
     "gemini-3.1-flash": ModelPrice(0.50, 3.00),

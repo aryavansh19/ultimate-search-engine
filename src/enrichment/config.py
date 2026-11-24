@@ -31,7 +31,8 @@ load_dotenv(override=True)
 # published rate is not actually reachable on a new key.
 DEFAULT_TEXT_MODEL = "gemini-3.5-flash-lite"
 DEFAULT_TEXT_FALLBACK = "gemini-3.1-flash-lite"
-DEFAULT_TEXT_TERTIARY = "gemini-2.5-flash"
+DEFAULT_TEXT_TERTIARY = "gemini-3.8-flash"
+DEFAULT_TEXT_QUATERNARY = "gemini-2.5-flash"
 # Measured on a real 60-second clipped YouTube request:
 #
 #   gemini-3.7-flash        timed out / 503 on every attempt
@@ -89,6 +90,7 @@ class EnrichmentConfig:
     media_fallback_model: str | None = DEFAULT_MEDIA_FALLBACK
     text_fallback_model: str | None = DEFAULT_TEXT_FALLBACK
     text_tertiary_model: str | None = DEFAULT_TEXT_TERTIARY
+    text_quaternary_model: str | None = DEFAULT_TEXT_QUATERNARY
 
     store_path: Path = Path("data/extractor_cache.sqlite3")
     request_timeout: float = 120.0
@@ -166,6 +168,9 @@ class EnrichmentConfig:
             ),
             text_tertiary_model=(
                 os.getenv("ENRICH_TEXT_TERTIARY", DEFAULT_TEXT_TERTIARY) or None
+            ),
+            text_quaternary_model=(
+                os.getenv("ENRICH_TEXT_QUATERNARY", DEFAULT_TEXT_QUATERNARY) or None
             ),
             store_path=Path(
                 os.getenv("EXTRACTOR_CACHE_PATH", "data/extractor_cache.sqlite3")

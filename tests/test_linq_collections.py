@@ -256,7 +256,8 @@ class EndpointTests(unittest.TestCase):
         cfg = EnrichmentConfig(api_key="fake")
         self.assertEqual(cfg.text_model, "gemini-3.5-flash-lite")
         self.assertEqual(cfg.text_fallback_model, "gemini-3.1-flash-lite")
-        self.assertEqual(cfg.text_tertiary_model, "gemini-2.5-flash")
+        self.assertEqual(cfg.text_tertiary_model, "gemini-3.8-flash")
+        self.assertEqual(cfg.text_quaternary_model, "gemini-2.5-flash")
 
         def fake_post(path, payload, attempts=3, **kwargs):
             if "flash-lite" in path:
@@ -266,7 +267,40 @@ class EndpointTests(unittest.TestCase):
         selector = GeminiCollectionSelector(cfg)
         with patch.object(selector, "_post", side_effect=fake_post):
             model, _ = selector._generate([cfg.text_model, cfg.text_fallback_model, cfg.text_tertiary_model], {})
-            self.assertEqual(model, "gemini-2.5-flash")
+            self.assertEqual(model, "gemini-3.8-flash")
+
+    def test_rich_degraded_analysis_attempts_classification(self):
+        selector = GeminiCollectionSelector(EnrichmentConfig(api_key="fake-test-key"))
+        choices = [ExistingCollection(UUID(COLLECTION), "Games")]
+        rich_degraded = AnalyzeResponse(
+            url="https://instant-gaming.com/en/gta",
+            url_hash="gta-hash",
+            title="Buy Grand Theft Auto VI Ultimate Edition - PC",
+            tags=["buy", "grand", "theft", "auto", "rockstar"],
+            degraded=True,
+            summary="",
+        )
+        with patch.object(selector, "_generate", return_value=("test", model_response(COLLECTION))):
+            result = selector.select(rich_degraded, choices)
+        self.assertEqual(result.status, "selected")
+        self.assertEqual(str(result.collection_id), COLLECTION)
+
+    def test_heuristic_fallback_when_llm_fails(self):
+        selector = GeminiCollectionSelector(EnrichmentConfig(api_key="fake-test-key"))
+        choices = [ExistingCollection(UUID(COLLECTION), "Games")]
+        rich_data = AnalyzeResponse(
+            url="https://instant-gaming.com/en/gta",
+            url_hash="gta-hash",
+            title="Buy Grand Theft Auto VI Ultimate Edition - PC",
+            tags=["rockstar", "gta", "game"],
+            summary="A game description",
+        )
+        with patch.object(selector, "_generate", side_effect=ProviderError("503 overloaded")):
+            result = selector.select(rich_data, choices)
+        self.assertEqual(result.status, "selected")
+        self.assertEqual(str(result.collection_id), COLLECTION)
+        self.assertEqual(result.collection_name, "Games")
+        self.assertEqual(result.reason, "heuristic_fallback")
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from dataclasses import dataclass, replace
 from typing import Iterable
@@ -123,12 +124,81 @@ class GeminiCollectionSelector(GeminiProvider):
     def _post(self, path: str, payload: dict, attempts: int = 3, **kwargs) -> dict:
         return super()._post(path, payload, attempts=1, **kwargs)
 
+    @staticmethod
+    def _heuristic_match(
+        analysis: AnalyzeResponse, choices: list[ExistingCollection]
+    ) -> CollectionSuggestion | None:
+        """Fallback rule-based matching when LLM is unavailable or failing due to 503 spikes.
+
+        Matches existing collection names against bookmark category, tags, and title.
+        Only returns a match when there is a clear, unambiguous signal.
+        """
+        if not choices:
+            return None
+
+        text_tokens: set[str] = set()
+        if analysis.category:
+            text_tokens.add(analysis.category.lower().strip())
+        for tag in (analysis.tags or []):
+            text_tokens.add(str(tag).lower().strip())
+        if analysis.title:
+            for word in re.findall(r"\b\w+\b", analysis.title.lower()):
+                if len(word) > 2:
+                    text_tokens.add(word)
+        if analysis.description:
+            for word in re.findall(r"\b\w+\b", analysis.description.lower()[:300]):
+                if len(word) > 2:
+                    text_tokens.add(word)
+
+        collection_synonyms: dict[str, set[str]] = {
+            "games": {"game", "games", "gaming", "gameplay", "fps", "rpg", "multiplayer", "rockstar", "gta", "playstation", "xbox", "nintendo", "steam", "battleroyale", "bgmi", "cricket"},
+            "gaming": {"game", "games", "gaming", "gameplay", "fps", "rpg", "multiplayer", "rockstar", "gta", "steam"},
+            "movies": {"movie", "movies", "film", "films", "cinema", "trailer", "hollywood", "bollywood", "director", "imdb"},
+            "films": {"movie", "movies", "film", "films", "cinema", "trailer"},
+            "recipes": {"recipe", "recipes", "cooking", "cook", "dish", "dishes", "ingredient", "ingredients", "cuisine", "food", "kitchen", "bake", "baking"},
+            "food": {"recipe", "recipes", "cooking", "food", "cuisine", "dish", "restaurant"},
+            "books": {"book", "books", "author", "novel", "novels", "read", "reading", "goodreads", "isbn"},
+            "music": {"music", "song", "songs", "album", "artist", "singer", "audio", "spotify", "soundtrack"},
+            "developer": {"developer", "programming", "coding", "software", "github", "python", "swift", "javascript", "code", "api"},
+            "travel": {"travel", "trip", "tourism", "vacation", "destination", "hotel", "flight", "tourist"},
+            "articles": {"article", "articles", "news", "journalism", "essay", "blog", "post"},
+        }
+
+        best_choice = None
+        best_score = 0
+
+        for choice in choices:
+            c_name = choice.name.lower().strip()
+            stem = c_name[:-1] if c_name.endswith("s") and len(c_name) > 3 else c_name
+            synonyms = set(collection_synonyms.get(c_name, {c_name, stem}))
+            synonyms.add(c_name)
+            synonyms.add(stem)
+
+            score = sum(1 for syn in synonyms if syn in text_tokens)
+            if score > best_score:
+                best_score = score
+                best_choice = choice
+
+        if best_choice and best_score >= 1:
+            return CollectionSuggestion(
+                status="selected",
+                collection_id=best_choice.id,
+                collection_name=best_choice.name,
+                reason="heuristic_fallback",
+            )
+        return None
+
     def select(
         self, analysis: AnalyzeResponse, choices: list[ExistingCollection]
     ) -> CollectionSuggestion:
         if not choices:
             return CollectionSuggestion(status="no_collections")
-        if analysis.degraded or not analysis.summary.strip():
+        # An analysis that degraded to offline extraction must have rich structured content
+        # (title and multiple tags or description) to justify spending classification quota.
+        has_rich_content = bool(analysis.title and (len(analysis.tags) >= 2 or analysis.description))
+        if analysis.degraded and not has_rich_content:
+            return CollectionSuggestion(status="unavailable", reason="insufficient_content")
+        if not (analysis.summary and analysis.summary.strip()) and not has_rich_content:
             return CollectionSuggestion(status="unavailable", reason="insufficient_content")
         if not self.config.has_api_key:
             return CollectionSuggestion(status="unavailable", reason="model_unavailable")
@@ -164,7 +234,8 @@ class GeminiCollectionSelector(GeminiProvider):
         candidates_models = [
             self.config.text_model,
             self.config.text_fallback_model,
-            getattr(self.config, "text_tertiary_model", "gemini-2.5-flash"),
+            getattr(self.config, "text_tertiary_model", "gemini-3.8-flash"),
+            getattr(self.config, "text_quaternary_model", "gemini-2.5-flash"),
         ]
         started = time.perf_counter()
         try:
@@ -184,6 +255,9 @@ class GeminiCollectionSelector(GeminiProvider):
             if selected == "NONE":
                 return CollectionSuggestion(status="no_match", **info)
             if not isinstance(selected, str) or selected not in candidates:
+                fallback = self._heuristic_match(analysis, choices)
+                if fallback:
+                    return fallback
                 info["reason"] = "invalid_model_response"
                 return CollectionSuggestion(status="unavailable", **info)
             return CollectionSuggestion(
@@ -191,6 +265,9 @@ class GeminiCollectionSelector(GeminiProvider):
                 collection_name=candidates[selected], **info,
             )
         except (ProviderError, ValueError, TypeError, KeyError, AttributeError):
+            fallback = self._heuristic_match(analysis, choices)
+            if fallback:
+                return fallback
             return CollectionSuggestion(
                 status="unavailable", reason="model_unavailable",
                 duration_ms=int((time.perf_counter() - started) * 1000),

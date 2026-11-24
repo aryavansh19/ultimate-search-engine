@@ -122,7 +122,8 @@ class GeminiProvider(EnrichmentProvider):
             candidates = [
                 self.config.text_model,
                 self.config.text_fallback_model,
-                getattr(self.config, "text_tertiary_model", "gemini-2.5-flash"),
+                getattr(self.config, "text_tertiary_model", "gemini-3.8-flash"),
+                getattr(self.config, "text_quaternary_model", "gemini-2.5-flash"),
             ]
             note = "text only"
             prompt = build_text_prompt(
