@@ -120,8 +120,8 @@ class GeminiCollectionSelector(GeminiProvider):
         # A best-effort filing suggestion must not inherit multi-minute video timeouts.
         super().__init__(replace(config, request_timeout=min(config.request_timeout, 20.0)))
 
-    def _post(self, path: str, payload: dict, attempts: int = 3) -> dict:
-        return super()._post(path, payload, attempts=1)
+    def _post(self, path: str, payload: dict, attempts: int = 3, **kwargs) -> dict:
+        return super()._post(path, payload, attempts=1, **kwargs)
 
     def select(
         self, analysis: AnalyzeResponse, choices: list[ExistingCollection]

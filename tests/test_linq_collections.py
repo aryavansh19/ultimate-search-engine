@@ -192,8 +192,8 @@ class SelectorTests(unittest.TestCase):
         self.assertEqual(selector.config.request_timeout, 20)
         self.assertEqual(config.request_timeout, 120)
         with patch("enrichment.providers.gemini.GeminiProvider._post", return_value={}) as post:
-            selector._post("models/test:generateContent", {}, attempts=3)
-        post.assert_called_once_with("models/test:generateContent", {}, attempts=1)
+            selector._post("models/test:generateContent", {}, attempts=3, pinned_slot="fake_slot")
+        post.assert_called_once_with("models/test:generateContent", {}, attempts=1, pinned_slot="fake_slot")
 
     def test_same_content_is_classified_independently_for_each_user(self):
         original = analysis()
