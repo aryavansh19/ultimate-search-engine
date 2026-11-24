@@ -48,10 +48,11 @@ from .base import EnrichmentProvider, ProviderError, ProviderUnavailable
 log = logging.getLogger("enrichment.gemini")
 
 _YOUTUBE_HOST = re.compile(r"(?:^|\.)(?:youtube\.com|youtu\.be)$", re.IGNORECASE)
-_RETRY_STATUSES = {429, 500, 502, 504}
-# 404 means the model name is retired for this key; 503 means it is overloaded. Both are
-# answered by switching models, not by retrying the same one.
-_MODEL_UNAVAILABLE_STATUSES = {404, 503}
+_RETRY_STATUSES = {429, 500, 502, 503, 504}
+# 404 means the model name is retired for this key; it is answered by switching models,
+# not by retrying the same one. 503 (demand spike) retries across configured attempts
+# before escalating to ModelUnavailable.
+_MODEL_UNAVAILABLE_STATUSES = {404}
 
 
 def _parse_retry_after(response: httpx.Response) -> float | None:
@@ -118,7 +119,11 @@ class GeminiProvider(EnrichmentProvider):
             )
             parts = [{"text": prompt}, *parts]
         else:
-            candidates = [self.config.text_model, self.config.text_fallback_model]
+            candidates = [
+                self.config.text_model,
+                self.config.text_fallback_model,
+                getattr(self.config, "text_tertiary_model", "gemini-2.5-flash"),
+            ]
             note = "text only"
             prompt = build_text_prompt(
                 document, envelope.platform.value, envelope.canonical_url
@@ -196,11 +201,10 @@ class GeminiProvider(EnrichmentProvider):
         last: ProviderError | None = None
         for index, model in enumerate(models):
             is_last = index == len(models) - 1
-            # One shot for every model except the last. Retrying a model that just
-            # timed out on video is close to pointless and extremely expensive in wall
-            # clock: three attempts at a 120s timeout burned six minutes before the
-            # fallback -- which then answered in nine seconds -- was even tried.
-            attempts = 3 if is_last else 1
+            # For each model, allow 2 attempts if it is not the last (giving it 1 retry on
+            # transient 503/429 spikes before stepping down to the next tier).
+            # The last model gets 3 attempts.
+            attempts = 3 if is_last else 2
             try:
                 return model, self._post(
                     f"models/{model}:generateContent",
@@ -329,6 +333,13 @@ class GeminiProvider(EnrichmentProvider):
     ) -> dict:
         url = f"{self.config.api_base}/{path}"
         model_name = path.removeprefix("models/").split(":", 1)[0]
+        if "gemini-2.5" in model_name and "generationConfig" in payload:
+            # gemini-2.5-flash defaults to reasoning mode; setting thinkingBudget to 0
+            # ensures instant, low-cost structured JSON without reasoning token overhead.
+            payload = dict(payload)
+            gen_cfg = dict(payload.get("generationConfig", {}))
+            gen_cfg["thinkingConfig"] = {"thinkingBudget": 0}
+            payload["generationConfig"] = gen_cfg
         last_error: str = "unknown"
         last_key: str | None = pinned_slot.api_key if pinned_slot else self.config.api_key
         transport_only = True
@@ -378,6 +389,11 @@ class GeminiProvider(EnrichmentProvider):
                     )
                     # When cycling across multiple keys, rotate immediately without sleeping on the failed key's cooldown.
                     delay = 0.0 if (pinned_slot is None and self._pool_size() > 1) else (retry_after or cooldown or (1.5 * (attempt + 1)))
+                elif response.status_code == 503:
+                    slot.governor.record_error(status_code=503)
+                    # 503 is a temporary demand spike on Google's model cluster.
+                    # Wait briefly so the transient spike clears before the next attempt.
+                    delay = max(1.0, 1.5 * (attempt + 1))
                 else:
                     slot.governor.record_error(status_code=response.status_code)
                     delay = 1.5 * (attempt + 1)
@@ -396,7 +412,7 @@ class GeminiProvider(EnrichmentProvider):
                 )
 
                 if response.status_code in _MODEL_UNAVAILABLE_STATUSES:
-                    # A retired or overloaded model. Retrying the same name will not
+                    # 404: A retired model that is permanently unavailable. Retrying the same name will not
                     # help; the caller should try a different model.
                     raise ModelUnavailable(_redact(last_error, last_key))
                 if response.status_code not in _RETRY_STATUSES:
@@ -423,11 +439,10 @@ class GeminiProvider(EnrichmentProvider):
                 time.sleep(delay)
 
         message = _redact(last_error, last_key)
-        if transport_only:
-            # Every attempt died in transport -- almost always a read timeout while the
-            # model chews on video. A model that cannot answer within the timeout is
-            # unavailable in practice, so let the caller switch models rather than
-            # burning the item.
+        if transport_only or "HTTP 503" in last_error or "HTTP 404" in last_error:
+            # Overloaded (503), missing (404), or transport-timeout models cannot answer
+            # within this tier. Raise ModelUnavailable so the caller can switch to the next
+            # tier model in the fallback chain.
             raise ModelUnavailable(message)
         raise ProviderError(message)
 

@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from enrichment.config import EnrichmentConfig
 from enrichment.providers.base import ProviderError
+from enrichment.providers.gemini import ModelUnavailable
 from linq_server.auth import Caller
 from linq_server.collections import (
     CollectionLookupError,
@@ -250,6 +251,22 @@ class EndpointTests(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         self.service.analyze.assert_not_called()
         self.policy.charge.assert_not_called()
+
+    def test_tier_step_down_on_overload(self):
+        cfg = EnrichmentConfig(api_key="fake")
+        self.assertEqual(cfg.text_model, "gemini-3.5-flash-lite")
+        self.assertEqual(cfg.text_fallback_model, "gemini-3.1-flash-lite")
+        self.assertEqual(cfg.text_tertiary_model, "gemini-2.5-flash")
+
+        def fake_post(path, payload, attempts=3, **kwargs):
+            if "flash-lite" in path:
+                raise ModelUnavailable("503 overloaded")
+            return {"model": path, "candidates": []}
+
+        selector = GeminiCollectionSelector(cfg)
+        with patch.object(selector, "_post", side_effect=fake_post):
+            model, _ = selector._generate([cfg.text_model, cfg.text_fallback_model, cfg.text_tertiary_model], {})
+            self.assertEqual(model, "gemini-2.5-flash")
 
 
 if __name__ == "__main__":

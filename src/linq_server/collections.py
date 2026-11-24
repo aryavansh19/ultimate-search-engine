@@ -161,9 +161,14 @@ class GeminiCollectionSelector(GeminiProvider):
                 },
             },
         }
+        candidates_models = [
+            self.config.text_model,
+            self.config.text_fallback_model,
+            getattr(self.config, "text_tertiary_model", "gemini-2.5-flash"),
+        ]
         started = time.perf_counter()
         try:
-            model, data = self._generate([self.config.text_model, self.config.text_fallback_model], payload)
+            model, data = self._generate(candidates_models, payload)
             usage = data.get("usageMetadata") or {}
             input_tokens = int(usage.get("promptTokenCount") or 0)
             output_tokens = int(usage.get("candidatesTokenCount") or 0) + int(usage.get("thoughtsTokenCount") or 0)
